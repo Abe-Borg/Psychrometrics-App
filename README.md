@@ -6,6 +6,7 @@ Interactive psychrometric chart application for HVAC design. All thermodynamic c
 
 **Chunk 1.1 — Backend Scaffolding + State Point Engine**: ✅ Complete
 **Chunk 1.2 — Chart Background Data Generator**: ✅ Complete
+**Chunk 1.3 — Frontend Scaffolding + Base Chart Rendering**: ✅ Complete
 
 ### What's Working
 - FastAPI backend with psychrolib integration
@@ -29,9 +30,17 @@ Interactive psychrometric chart application for HVAC design. All thermodynamic c
 - Input pair can be given in either order (e.g., `RH, Tdb` works the same as `Tdb, RH`)
 - 79 passing tests validating against ASHRAE reference data
 - CORS configured for local frontend development
+- React + TypeScript + Tailwind frontend with:
+  - Interactive Plotly.js psychrometric chart (zoom, pan, scroll-zoom)
+  - All background lines rendered: saturation curve, RH, Twb, enthalpy, volume
+  - Color-coded line types with legend
+  - Unit system toggle (IP ↔ SI) with live chart reload
+  - Altitude and pressure inputs with auto-conversion
+  - Zustand state management
+  - Vite dev server with API proxy to backend
 
 ### What's Next
-- **Chunk 1.3**: Frontend scaffolding + base chart rendering (React + Plotly.js)
+- **Chunk 1.4**: State point UI (input form, display, plot on chart)
 
 ## Tech Stack
 
@@ -41,6 +50,10 @@ Interactive psychrometric chart application for HVAC design. All thermodynamic c
 | Backend | FastAPI + Python 3.12 |
 | Iterative solvers | SciPy (brentq) |
 | Validation | Pydantic |
+| Frontend | React + TypeScript (Vite) |
+| Charting | Plotly.js (react-plotly.js) |
+| State management | Zustand |
+| Styling | Tailwind CSS v4 |
 | Testing | pytest |
 
 ## Project Structure
@@ -67,7 +80,30 @@ psychro-app/
 │   └── tests/
 │       ├── test_state_resolver.py   # 50 tests
 │       └── test_chart_generator.py  # 29 tests
-└── frontend/                        # (coming in Chunk 1.3)
+└── frontend/
+    ├── package.json
+    ├── vite.config.ts               # Vite + Tailwind + API proxy
+    ├── tsconfig.json
+    ├── index.html
+    └── src/
+        ├── main.tsx                 # Entry point
+        ├── App.tsx                  # Root component
+        ├── app.css                  # Global styles + Tailwind
+        ├── api/
+        │   └── client.ts           # Backend API client
+        ├── store/
+        │   └── useStore.ts         # Zustand state management
+        ├── types/
+        │   └── psychro.ts          # TypeScript interfaces
+        ├── utils/
+        │   └── formatting.ts       # Display formatting helpers
+        └── components/
+            ├── Chart/
+            │   └── PsychroChart.tsx # Main Plotly chart
+            └── Layout/
+                ├── AppLayout.tsx    # Top-level layout
+                ├── Toolbar.tsx      # Unit/altitude/pressure controls
+                └── Sidebar.tsx      # Sidebar (placeholder)
 ```
 
 ## Setup
@@ -108,6 +144,18 @@ Server runs at `http://localhost:8000`. API docs at `http://localhost:8000/docs`
 # From project root with venv activated
 PYTHONPATH=backend python -m pytest backend/tests/ -v
 ```
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Frontend runs at `http://localhost:5173`. API calls are proxied to the backend at `http://localhost:8000`.
+
+**Both servers must be running** — start the backend first, then the frontend.
 
 ## API Reference
 
