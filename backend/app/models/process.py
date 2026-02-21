@@ -14,6 +14,7 @@ class ProcessType(str, Enum):
     SENSIBLE_HEATING = "sensible_heating"
     SENSIBLE_COOLING = "sensible_cooling"
     COOLING_DEHUMIDIFICATION = "cooling_dehumidification"
+    ADIABATIC_MIXING = "adiabatic_mixing"
 
 
 class SensibleMode(str, Enum):
@@ -51,6 +52,11 @@ class ProcessInput(BaseModel):
     bypass_factor: Optional[float] = None  # 0 < BF < 1
     leaving_Tdb: Optional[float] = None
     leaving_RH: Optional[float] = None
+
+    # Adiabatic mixing parameters
+    stream2_point_pair: Optional[tuple[str, str]] = None
+    stream2_point_values: Optional[tuple[float, float]] = None
+    mixing_fraction: Optional[float] = None  # stream 1 fraction: m1/(m1+m2)
 
 
 class PathPoint(BaseModel):
