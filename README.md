@@ -8,6 +8,7 @@ Interactive psychrometric chart application for HVAC design. All thermodynamic c
 **Chunk 1.2 — Chart Background Data Generator**: ✅ Complete
 **Chunk 1.3 — Frontend Scaffolding + Base Chart Rendering**: ✅ Complete
 **Chunk 1.4 — State Point UI (Input, Display, Plot)**: ✅ Complete
+**Chunk 1.5 — Hover Tooltip (Live Properties at Cursor)**: ✅ Complete
 
 ### What's Working
 - FastAPI backend with psychrolib integration
@@ -42,9 +43,10 @@ Interactive psychrometric chart application for HVAC design. All thermodynamic c
   - State point input form (7 input pair types, dynamic labels, validation)
   - State point list with expandable property cards and color-coded markers
   - State points plotted on chart with hover tooltips showing all properties
+  - Live cursor tooltip: hover anywhere on the chart to see Tdb, W, RH, Twb, Tdp, h, v at that point (client-side psychrolib.js, no API round-trip)
 
 ### What's Next
-- **Chunk 1.5**: Live hover tooltip (psychrometric properties at cursor position)
+- **Chunk 2.1**: Process solver framework + sensible heating/cooling (backend)
 
 ## Tech Stack
 

@@ -1,9 +1,10 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import Plot from "react-plotly.js";
-import type { Data, Layout, Config } from "plotly.js";
+import type { Data, Layout, Config, PlotHoverEvent } from "plotly.js";
 import { useStore } from "../../store/useStore";
 import { getChartData } from "../../api/client";
 import { fmt } from "../../utils/formatting";
+import { calcPropertiesAtCursor, type HoverProperties } from "../../utils/hoverCalc";
 
 // Chart line colors — reference our CSS custom properties conceptually
 const COLORS = {
@@ -33,6 +34,32 @@ export default function PsychroChart() {
     setChartData, setChartLoading, setChartError,
     statePoints,
   } = useStore();
+
+  // Hover tooltip state
+  const [hoverProps, setHoverProps] = useState<HoverProperties | null>(null);
+  const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
+
+  const handleHover = useCallback(
+    (event: Readonly<PlotHoverEvent>) => {
+      const point = event.points?.[0];
+      if (!point) return;
+      const Tdb = point.x as number;
+      const W_display = point.y as number;
+      const props = calcPropertiesAtCursor(Tdb, W_display, pressure, unitSystem);
+      setHoverProps(props);
+      // Position tooltip near cursor using the event's bounding box
+      if (event.event) {
+        const evt = event.event as MouseEvent;
+        setHoverPos({ x: evt.offsetX, y: evt.offsetY });
+      }
+    },
+    [pressure, unitSystem]
+  );
+
+  const handleUnhover = useCallback(() => {
+    setHoverProps(null);
+    setHoverPos(null);
+  }, []);
 
   // Fetch chart data when unit system or pressure changes
   useEffect(() => {
@@ -129,6 +156,31 @@ export default function PsychroChart() {
       name: "Saturation (100% RH)",
       legendgroup: "saturation",
       hoverinfo: "skip",
+    });
+
+    // --- Hover mesh: invisible dense grid for cursor property detection ---
+    // We use the RH lines as hover targets since they cover the valid chart area
+    const hoverX: number[] = [];
+    const hoverY: number[] = [];
+    // Sample points from every RH line plus the saturation curve
+    const allHoverSources = [
+      ...Object.values(chartData.rh_lines),
+      chartData.saturation_curve,
+    ];
+    for (const line of allHoverSources) {
+      for (let i = 0; i < line.length; i += 3) {
+        hoverX.push(line[i].Tdb);
+        hoverY.push(line[i].W_display);
+      }
+    }
+    t.push({
+      x: hoverX,
+      y: hoverY,
+      mode: "markers",
+      type: "scatter",
+      marker: { size: 1, color: "rgba(0,0,0,0)" },
+      showlegend: false,
+      hoverinfo: "none",
     });
 
     // --- State points ---
@@ -248,15 +300,52 @@ export default function PsychroChart() {
     );
   }
 
+  const isIP = unitSystem === "IP";
+  const tUnit = isIP ? "°F" : "°C";
+  const wUnit = isIP ? "gr/lb" : "g/kg";
+  const hUnit = isIP ? "BTU/lb" : "kJ/kg";
+  const vUnit = isIP ? "ft³/lb" : "m³/kg";
+
   return (
-    <div className="w-full h-full">
+    <div className="w-full h-full relative">
       <Plot
         data={traces}
         layout={layout}
         config={config}
         useResizeHandler
         style={{ width: "100%", height: "100%" }}
+        onHover={handleHover}
+        onUnhover={handleUnhover}
       />
+
+      {/* Hover tooltip */}
+      {hoverProps && hoverPos && (
+        <div
+          className="absolute pointer-events-none z-50 bg-bg-secondary/95 border border-border
+                     rounded px-3 py-2 text-xs font-mono shadow-lg"
+          style={{
+            left: hoverPos.x + 16,
+            top: hoverPos.y - 80,
+          }}
+        >
+          <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+            <span className="text-text-muted">Tdb</span>
+            <span className="text-text-primary text-right">{fmt(hoverProps.Tdb, 1)}{tUnit}</span>
+            <span className="text-text-muted">W</span>
+            <span className="text-text-primary text-right">{fmt(hoverProps.W_display, 1)} {wUnit}</span>
+            <span className="text-text-muted">RH</span>
+            <span className="text-text-primary text-right">{fmt(hoverProps.RH, 1)}%</span>
+            <span className="text-text-muted">Twb</span>
+            <span className="text-text-primary text-right">{fmt(hoverProps.Twb, 1)}{tUnit}</span>
+            <span className="text-text-muted">Tdp</span>
+            <span className="text-text-primary text-right">{fmt(hoverProps.Tdp, 1)}{tUnit}</span>
+            <span className="text-text-muted">h</span>
+            <span className="text-text-primary text-right">{fmt(hoverProps.h, 1)} {hUnit}</span>
+            <span className="text-text-muted">v</span>
+            <span className="text-text-primary text-right">{fmt(hoverProps.v, 2)} {vUnit}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
