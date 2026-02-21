@@ -5,6 +5,7 @@ Interactive psychrometric chart application for HVAC design. All thermodynamic c
 ## Status
 
 **Chunk 1.1 — Backend Scaffolding + State Point Engine**: ✅ Complete
+**Chunk 1.2 — Chart Background Data Generator**: ✅ Complete
 
 ### What's Working
 - FastAPI backend with psychrolib integration
@@ -17,14 +18,19 @@ Interactive psychrometric chart application for HVAC design. All thermodynamic c
   - `Twb + RH` (wet-bulb + relative humidity) — iterative solver
   - `Tdp + RH` (dew point + relative humidity) — iterative solver
 - Full property resolution: Tdb, Twb, Tdp, RH, W, W (grains/g·kg⁻¹), h, v, Pv, Ps, μ
+- Chart background data generator producing:
+  - Saturation curve (200 points)
+  - Constant RH lines (10%–90% in 10% steps)
+  - Constant wet-bulb lines (12 lines across chart range)
+  - Constant enthalpy lines (10 lines across chart range)
+  - Constant specific volume lines (6 lines across chart range)
 - IP and SI unit system support
-- Altitude-to-pressure conversion
+- Altitude-to-pressure conversion (chart data adjusts for non-standard pressure)
 - Input pair can be given in either order (e.g., `RH, Tdb` works the same as `Tdb, RH`)
-- 50 passing tests validating against ASHRAE reference data
+- 79 passing tests validating against ASHRAE reference data
 - CORS configured for local frontend development
 
 ### What's Next
-- **Chunk 1.2**: Chart background data generator (saturation curve, constant RH/Twb/h/v lines)
 - **Chunk 1.3**: Frontend scaffolding + base chart rendering (React + Plotly.js)
 
 ## Tech Stack
@@ -41,23 +47,27 @@ Interactive psychrometric chart application for HVAC design. All thermodynamic c
 
 ```
 psychro-app/
+├── README.md
+├── requirements.txt
+├── venv/                            # created locally
 ├── backend/
 │   ├── app/
 │   │   ├── main.py                  # FastAPI entry point
 │   │   ├── config.py                # Constants, defaults, units
 │   │   ├── api/
 │   │   │   ├── router.py            # Top-level API router
-│   │   │   └── state_point.py       # /state-point routes
+│   │   │   ├── state_point.py       # /state-point routes
+│   │   │   └── chart_data.py        # /chart-data routes
 │   │   ├── engine/
 │   │   │   ├── state_resolver.py    # Core state point calculation
+│   │   │   ├── chart_generator.py   # Chart background line generation
 │   │   │   └── processes/           # (future) process solvers
 │   │   └── models/
 │   │       └── state_point.py       # Pydantic models
-│   ├── tests/
-│   │   └── test_state_resolver.py   # 50 tests
-│   ├── requirements.txt
-│   └── venv/
-└── README.md
+│   └── tests/
+│       ├── test_state_resolver.py   # 50 tests
+│       └── test_chart_generator.py  # 29 tests
+└── frontend/                        # (coming in Chunk 1.3)
 ```
 
 ## Setup
@@ -68,7 +78,7 @@ psychro-app/
 ### Backend
 
 ```bash
-cd backend
+cd psychro-app
 python -m venv venv
 
 # Windows
@@ -83,8 +93,11 @@ pip install -r requirements.txt
 ### Run the Server
 
 ```bash
-cd backend
-PYTHONPATH=. uvicorn app.main:app --reload --port 8000
+# From project root with venv activated
+set PYTHONPATH=backend        # Windows
+export PYTHONPATH=backend     # macOS/Linux
+
+uvicorn app.main:app --reload --port 8000 --app-dir backend
 ```
 
 Server runs at `http://localhost:8000`. API docs at `http://localhost:8000/docs`.
@@ -92,8 +105,8 @@ Server runs at `http://localhost:8000`. API docs at `http://localhost:8000/docs`
 ### Run Tests
 
 ```bash
-cd backend
-PYTHONPATH=. python -m pytest tests/ -v
+# From project root with venv activated
+PYTHONPATH=backend python -m pytest backend/tests/ -v
 ```
 
 ## API Reference
@@ -134,6 +147,35 @@ Resolve a full psychrometric state point from two independent properties.
   "mu": 0.492575
 }
 ```
+
+### `GET /api/v1/chart-data`
+
+Generate all psychrometric chart background line data.
+
+**Parameters:**
+- `unit_system` (string, optional): `IP` or `SI` (default: `IP`)
+- `pressure` (float, optional): Atmospheric pressure; psia for IP, Pa for SI (default: sea level)
+
+**Response (abbreviated):**
+```json
+{
+  "unit_system": "IP",
+  "pressure": 14.696,
+  "ranges": { "Tdb_min": 20.0, "Tdb_max": 120.0, "W_min": 0.0, "W_max": 220.0 },
+  "saturation_curve": [ { "Tdb": 20.0, "W": 0.002144, "W_display": 15.01 }, ... ],
+  "rh_lines": {
+    "10": [ { "Tdb": ..., "W": ..., "W_display": ... }, ... ],
+    "20": [ ... ],
+    ...
+    "90": [ ... ]
+  },
+  "twb_lines": { "30": [...], "35": [...], ... "85": [...] },
+  "enthalpy_lines": { "10": [...], "15": [...], ... "55": [...] },
+  "volume_lines": { "12.5": [...], "13.0": [...], ... "15.0": [...] }
+}
+```
+
+Each line is an array of `{Tdb, W, W_display}` points. `W` is in lb/lb (IP) or kg/kg (SI). `W_display` is in grains/lb (IP) or g/kg (SI).
 
 ### `GET /api/v1/pressure-from-altitude`
 
