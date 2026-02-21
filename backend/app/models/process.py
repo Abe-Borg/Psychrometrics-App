@@ -22,6 +22,11 @@ class SensibleMode(str, Enum):
     HEAT_AND_AIRFLOW = "heat_and_airflow"
 
 
+class CoolingDehumMode(str, Enum):
+    FORWARD = "forward"  # ADP + BF → leaving state
+    REVERSE = "reverse"  # entering + leaving → ADP + BF
+
+
 class ProcessInput(BaseModel):
     """Input for a psychrometric process calculation."""
 
@@ -40,9 +45,10 @@ class ProcessInput(BaseModel):
     Q_sensible: Optional[float] = None  # BTU/hr (IP) or W (SI)
     airflow_cfm: Optional[float] = None  # CFM (IP) or m³/s (SI)
 
-    # Cooling & dehumidification parameters (Chunk 2.2)
+    # Cooling & dehumidification parameters
+    cooling_dehum_mode: Optional[CoolingDehumMode] = None
     adp_Tdb: Optional[float] = None
-    bypass_factor: Optional[float] = None
+    bypass_factor: Optional[float] = None  # 0 < BF < 1
     leaving_Tdb: Optional[float] = None
     leaving_RH: Optional[float] = None
 
