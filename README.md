@@ -7,6 +7,7 @@ Interactive psychrometric chart application for HVAC design. All thermodynamic c
 **Chunk 1.1 — Backend Scaffolding + State Point Engine**: ✅ Complete
 **Chunk 1.2 — Chart Background Data Generator**: ✅ Complete
 **Chunk 1.3 — Frontend Scaffolding + Base Chart Rendering**: ✅ Complete
+**Chunk 1.4 — State Point UI (Input, Display, Plot)**: ✅ Complete
 
 ### What's Working
 - FastAPI backend with psychrolib integration
@@ -38,9 +39,12 @@ Interactive psychrometric chart application for HVAC design. All thermodynamic c
   - Altitude and pressure inputs with auto-conversion
   - Zustand state management
   - Vite dev server with API proxy to backend
+  - State point input form (7 input pair types, dynamic labels, validation)
+  - State point list with expandable property cards and color-coded markers
+  - State points plotted on chart with hover tooltips showing all properties
 
 ### What's Next
-- **Chunk 1.4**: State point UI (input form, display, plot on chart)
+- **Chunk 1.5**: Live hover tooltip (psychrometric properties at cursor position)
 
 ## Tech Stack
 
@@ -100,10 +104,13 @@ psychro-app/
         └── components/
             ├── Chart/
             │   └── PsychroChart.tsx # Main Plotly chart
+            ├── StatePoint/
+            │   ├── StatePointForm.tsx  # Input form
+            │   └── StatePointList.tsx  # List with expandable cards
             └── Layout/
                 ├── AppLayout.tsx    # Top-level layout
                 ├── Toolbar.tsx      # Unit/altitude/pressure controls
-                └── Sidebar.tsx      # Sidebar (placeholder)
+                └── Sidebar.tsx      # State point form + list
 ```
 
 ## Setup
