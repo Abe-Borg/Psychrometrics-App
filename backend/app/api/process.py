@@ -1,0 +1,39 @@
+"""
+API routes for psychrometric process calculations.
+"""
+
+from fastapi import APIRouter, HTTPException
+
+from app.models.process import ProcessInput, ProcessOutput, ProcessType
+from app.engine.processes.sensible import SensibleSolver
+
+router = APIRouter(prefix="/api/v1", tags=["process"])
+
+# Solver dispatch table — maps process types to solver instances
+_SOLVERS = {
+    ProcessType.SENSIBLE_HEATING: SensibleSolver(),
+    ProcessType.SENSIBLE_COOLING: SensibleSolver(),
+}
+
+
+@router.post("/process", response_model=ProcessOutput)
+async def calculate_process(data: ProcessInput) -> ProcessOutput:
+    """
+    Calculate a psychrometric process.
+
+    Dispatches to the appropriate solver based on process_type.
+    Returns start state, end state, path points, metadata, and any warnings.
+    """
+    solver = _SOLVERS.get(data.process_type)
+    if solver is None:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Process type '{data.process_type}' is not yet implemented.",
+        )
+
+    try:
+        return solver.solve(data)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Calculation error: {str(e)}")
