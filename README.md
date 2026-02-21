@@ -62,12 +62,20 @@ Interactive psychrometric chart application for HVAC design. All thermodynamic c
 | Styling | Tailwind CSS v4 |
 | Testing | pytest |
 
+## Documentation
+
+- **[ROADMAP.md](ROADMAP.md)** — Architecture, data models, API design, phase overview
+- **[IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)** — Chunk-by-chunk build plan with tasks and verification steps
+
 ## Project Structure
 
 ```
-psychro-app/
+Psychrometrics-App/
 ├── README.md
+├── ROADMAP.md                       # Architecture & roadmap
+├── IMPLEMENTATION_PLAN.md           # Detailed build plan
 ├── requirements.txt
+├── run_backend.py                   # Backend launcher
 ├── venv/                            # created locally
 ├── backend/
 │   ├── app/
@@ -100,9 +108,11 @@ psychro-app/
         ├── store/
         │   └── useStore.ts         # Zustand state management
         ├── types/
-        │   └── psychro.ts          # TypeScript interfaces
+        │   ├── psychro.ts          # TypeScript interfaces
+        │   └── psychrolib.d.ts     # Type declarations for psychrolib JS
         ├── utils/
-        │   └── formatting.ts       # Display formatting helpers
+        │   ├── formatting.ts       # Display formatting helpers
+        │   └── hoverCalc.ts        # Client-side hover tooltip calculations
         └── components/
             ├── Chart/
             │   └── PsychroChart.tsx # Main Plotly chart
@@ -138,11 +148,12 @@ pip install -r requirements.txt
 ### Run the Server
 
 ```bash
-# From project root with venv activated
-set PYTHONPATH=backend        # Windows
-export PYTHONPATH=backend     # macOS/Linux
+# Option 1: From project root (uses run_backend.py)
+python run_backend.py
 
-uvicorn app.main:app --reload --port 8000 --app-dir backend
+# Option 2: From backend directory
+cd backend
+python -m uvicorn app.main:app --reload --port 8000
 ```
 
 Server runs at `http://localhost:8000`. API docs at `http://localhost:8000/docs`.
@@ -150,8 +161,8 @@ Server runs at `http://localhost:8000`. API docs at `http://localhost:8000/docs`
 ### Run Tests
 
 ```bash
-# From project root with venv activated
-PYTHONPATH=backend python -m pytest backend/tests/ -v
+cd backend
+python -m pytest tests/ -v
 ```
 
 ### Frontend
