@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useStore } from "../../store/useStore";
 import { calculateProcess } from "../../api/client";
-import type { ProcessType, SensibleMode, CoolingDehumMode, HumidificationMode } from "../../types/psychro";
+import type { ProcessType, SensibleMode, CoolingDehumMode, HumidificationMode, DehumidificationMode } from "../../types/psychro";
 
 const PROCESS_TYPES: { value: ProcessType; label: string }[] = [
   { value: "sensible_heating", label: "Sensible Heating" },
@@ -14,6 +14,8 @@ const PROCESS_TYPES: { value: ProcessType; label: string }[] = [
   { value: "direct_evaporative", label: "Direct Evaporative" },
   { value: "indirect_evaporative", label: "Indirect Evaporative" },
   { value: "indirect_direct_evaporative", label: "Indirect-Direct (Two-Stage)" },
+  { value: "chemical_dehumidification", label: "Chemical Dehumidification" },
+  { value: "sensible_reheat", label: "Sensible Reheat" },
 ];
 
 const INPUT_PAIRS: { value: [string, string]; label: string }[] = [
@@ -44,6 +46,11 @@ const STEAM_MODES: { value: HumidificationMode; label: string }[] = [
 
 const ADIABATIC_HUMID_MODES: { value: HumidificationMode; label: string }[] = [
   { value: "effectiveness", label: "Effectiveness" },
+  { value: "target_rh", label: "Target RH" },
+];
+
+const CHEM_DEHUM_MODES: { value: DehumidificationMode; label: string }[] = [
+  { value: "target_w", label: "Target W" },
   { value: "target_rh", label: "Target RH" },
 ];
 
@@ -117,6 +124,9 @@ export default function ProcessBuilder() {
   const [iecEffectiveness, setIecEffectiveness] = useState("");
   const [decEffectiveness, setDecEffectiveness] = useState("");
 
+  // Chemical dehumidification
+  const [dehumMode, setDehumMode] = useState<DehumidificationMode>("target_w");
+
   // General
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -124,7 +134,7 @@ export default function ProcessBuilder() {
   const startPair = INPUT_PAIRS[startPairIndex].value;
   const [startLabel1, startLabel2] = getFieldLabels(startPair, unitSystem);
 
-  const isSensible = processType === "sensible_heating" || processType === "sensible_cooling";
+  const isSensible = processType === "sensible_heating" || processType === "sensible_cooling" || processType === "sensible_reheat";
 
   function resetProcessFields() {
     setSensibleMode("target_tdb");
@@ -148,6 +158,7 @@ export default function ProcessBuilder() {
     setWaterTemperature("");
     setIecEffectiveness("");
     setDecEffectiveness("");
+    setDehumMode("target_w");
     setError(null);
   }
 
@@ -262,6 +273,17 @@ export default function ProcessBuilder() {
       if (ie < 0 || ie > 1 || de < 0 || de > 1) { setError("Effectiveness must be between 0 and 1"); return; }
       input.iec_effectiveness = ie;
       input.dec_effectiveness = de;
+    } else if (processType === "chemical_dehumidification") {
+      input.dehum_mode = dehumMode;
+      if (dehumMode === "target_w") {
+        const w = parseFloat(targetW);
+        if (isNaN(w)) { setError("Enter a valid target W"); return; }
+        input.target_W = w;
+      } else if (dehumMode === "target_rh") {
+        const rh = parseFloat(targetRH);
+        if (isNaN(rh)) { setError("Enter a valid target RH"); return; }
+        input.target_RH = rh;
+      }
     }
 
     setLoading(true);
@@ -768,6 +790,56 @@ export default function ProcessBuilder() {
             />
           </div>
         </div>
+      )}
+
+      {/* --- Chemical dehumidification parameters --- */}
+      {processType === "chemical_dehumidification" && (
+        <>
+          <div>
+            <label className="block text-xs text-text-muted mb-1">Mode</label>
+            <select
+              value={dehumMode}
+              onChange={(e) => setDehumMode(e.target.value as DehumidificationMode)}
+              className={selectClass}
+            >
+              {CHEM_DEHUM_MODES.map((m) => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {dehumMode === "target_w" && (
+            <div>
+              <label className="block text-xs text-text-muted mb-1">
+                {isIP ? "Target W (lb/lb)" : "Target W (kg/kg)"}
+              </label>
+              <input
+                type="number"
+                value={targetW}
+                onChange={(e) => setTargetW(e.target.value)}
+                step={0.0001}
+                placeholder="—"
+                className={inputClass}
+              />
+            </div>
+          )}
+
+          {dehumMode === "target_rh" && (
+            <div>
+              <label className="block text-xs text-text-muted mb-1">Target RH (%)</label>
+              <input
+                type="number"
+                value={targetRH}
+                onChange={(e) => setTargetRH(e.target.value)}
+                min={0}
+                max={100}
+                step={1}
+                placeholder="—"
+                className={inputClass}
+              />
+            </div>
+          )}
+        </>
       )}
 
       {/* Error */}

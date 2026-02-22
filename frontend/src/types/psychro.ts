@@ -39,11 +39,14 @@ export type ProcessType =
   | "heated_water_humidification"
   | "direct_evaporative"
   | "indirect_evaporative"
-  | "indirect_direct_evaporative";
+  | "indirect_direct_evaporative"
+  | "chemical_dehumidification"
+  | "sensible_reheat";
 
 export type SensibleMode = "target_tdb" | "delta_t" | "heat_and_airflow";
 export type CoolingDehumMode = "forward" | "reverse";
 export type HumidificationMode = "target_rh" | "target_w" | "effectiveness";
+export type DehumidificationMode = "target_rh" | "target_w";
 
 export interface PathPoint {
   Tdb: number;
@@ -89,6 +92,9 @@ export interface ProcessInput {
   dec_effectiveness?: number;
   secondary_air_pair?: [string, string];
   secondary_air_values?: [number, number];
+
+  // Chemical dehumidification
+  dehum_mode?: DehumidificationMode;
 }
 
 export interface ProcessOutput {

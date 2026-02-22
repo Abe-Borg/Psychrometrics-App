@@ -39,6 +39,8 @@ const PROCESS_COLORS: Record<string, string> = {
   direct_evaporative: "#f5c45b",
   indirect_evaporative: "#f5c45b",
   indirect_direct_evaporative: "#f5c45b",
+  chemical_dehumidification: "#c45bf5",
+  sensible_reheat: "#ff6348",
 };
 
 const PROCESS_LABELS: Record<string, string> = {
@@ -52,6 +54,8 @@ const PROCESS_LABELS: Record<string, string> = {
   direct_evaporative: "Direct Evap.",
   indirect_evaporative: "Indirect Evap.",
   indirect_direct_evaporative: "IDEC (Two-Stage)",
+  chemical_dehumidification: "Chem. Dehum.",
+  sensible_reheat: "Sensible Reheat",
 };
 
 export default function PsychroChart() {

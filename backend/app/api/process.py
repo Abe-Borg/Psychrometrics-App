@@ -18,6 +18,7 @@ from app.engine.processes.evaporative import (
     IndirectEvaporativeSolver,
     IndirectDirectEvaporativeSolver,
 )
+from app.engine.processes.chemical_dehum import ChemicalDehumSolver
 
 router = APIRouter(prefix="/api/v1", tags=["process"])
 
@@ -33,6 +34,8 @@ _SOLVERS = {
     ProcessType.DIRECT_EVAPORATIVE: DirectEvaporativeSolver(),
     ProcessType.INDIRECT_EVAPORATIVE: IndirectEvaporativeSolver(),
     ProcessType.INDIRECT_DIRECT_EVAPORATIVE: IndirectDirectEvaporativeSolver(),
+    ProcessType.CHEMICAL_DEHUMIDIFICATION: ChemicalDehumSolver(),
+    ProcessType.SENSIBLE_REHEAT: SensibleSolver(),
 }
 
 

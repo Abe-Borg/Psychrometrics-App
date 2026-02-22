@@ -96,12 +96,13 @@ class SensibleSolver(ProcessSolver):
         else:
             raise ValueError(f"Unknown sensible mode: {mode}")
 
-        # Determine process type from direction
-        actual_type = (
-            ProcessType.SENSIBLE_HEATING
-            if end_Tdb >= start_Tdb
-            else ProcessType.SENSIBLE_COOLING
-        )
+        # Determine process type from direction (preserve SENSIBLE_REHEAT if given)
+        if pi.process_type == ProcessType.SENSIBLE_REHEAT:
+            actual_type = ProcessType.SENSIBLE_REHEAT
+        elif end_Tdb >= start_Tdb:
+            actual_type = ProcessType.SENSIBLE_HEATING
+        else:
+            actual_type = ProcessType.SENSIBLE_COOLING
 
         # Check if cooling crosses the dew point
         if end_Tdb < start.Tdp:

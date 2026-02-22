@@ -14,6 +14,8 @@ const PROCESS_COLORS: Record<ProcessType, string> = {
   direct_evaporative: "#f5c45b",
   indirect_evaporative: "#f5c45b",
   indirect_direct_evaporative: "#f5c45b",
+  chemical_dehumidification: "#c45bf5",
+  sensible_reheat: "#ff6348",
 };
 
 const PROCESS_LABELS: Record<ProcessType, string> = {
@@ -27,6 +29,8 @@ const PROCESS_LABELS: Record<ProcessType, string> = {
   direct_evaporative: "Direct Evap.",
   indirect_evaporative: "Indirect Evap.",
   indirect_direct_evaporative: "IDEC (Two-Stage)",
+  chemical_dehumidification: "Chem. Dehum.",
+  sensible_reheat: "Sensible Reheat",
 };
 
 function PropertyRow({ label, value }: { label: string; value: string }) {
@@ -405,6 +409,54 @@ function ProcessCard({
                 )}
                 {m.end_RH != null && (
                   <PropertyRow label="End RH" value={`${fmt(m.end_RH as number, 1)}%`} />
+                )}
+              </>
+            )}
+
+            {/* Chemical dehumidification metadata */}
+            {proc.process_type === "chemical_dehumidification" && (
+              <>
+                {m.h_constant != null && (
+                  <PropertyRow
+                    label="h (constant)"
+                    value={`${fmt(m.h_constant as number, 2)} ${hUnit}`}
+                  />
+                )}
+                {m.delta_Tdb != null && (
+                  <PropertyRow
+                    label="Delta Tdb"
+                    value={`${fmt(m.delta_Tdb as number, 2)} ${tUnit}`}
+                  />
+                )}
+                {m.delta_W_display != null && (
+                  <PropertyRow
+                    label="Delta W"
+                    value={`${fmt(m.delta_W_display as number, 2)} ${wUnit}`}
+                  />
+                )}
+                {m.start_RH != null && (
+                  <PropertyRow label="Start RH" value={`${fmt(m.start_RH as number, 1)}%`} />
+                )}
+                {m.end_RH != null && (
+                  <PropertyRow label="End RH" value={`${fmt(m.end_RH as number, 1)}%`} />
+                )}
+              </>
+            )}
+
+            {/* Sensible reheat metadata (same as sensible heating) */}
+            {proc.process_type === "sensible_reheat" && (
+              <>
+                {m.delta_T != null && (
+                  <PropertyRow
+                    label="Delta T"
+                    value={`${fmt(m.delta_T as number, 2)} ${tUnit}`}
+                  />
+                )}
+                {m.Qs_per_unit_mass != null && (
+                  <PropertyRow
+                    label="Qs/mass"
+                    value={`${fmt(m.Qs_per_unit_mass as number, 2)} ${hUnit}`}
+                  />
                 )}
               </>
             )}
