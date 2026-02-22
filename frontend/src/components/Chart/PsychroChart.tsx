@@ -27,12 +27,28 @@ const POINT_COLORS = [
   "#c45bf5", "#ff9f43", "#54a0ff", "#ff6348",
 ];
 
+// Process line colors by type
+const PROCESS_COLORS: Record<string, string> = {
+  sensible_heating: "#ff9f43",
+  sensible_cooling: "#ff9f43",
+  cooling_dehumidification: "#54e0ff",
+  adiabatic_mixing: "#e454ff",
+};
+
+const PROCESS_LABELS: Record<string, string> = {
+  sensible_heating: "Sensible Heating",
+  sensible_cooling: "Sensible Cooling",
+  cooling_dehumidification: "Cooling & Dehum",
+  adiabatic_mixing: "Adiabatic Mixing",
+};
+
 export default function PsychroChart() {
   const {
     chartData, chartLoading, chartError,
     unitSystem, pressure,
     setChartData, setChartLoading, setChartError,
     statePoints,
+    processes,
   } = useStore();
 
   // Hover tooltip state
@@ -218,13 +234,110 @@ export default function PsychroChart() {
       });
     });
 
+    // --- Process lines ---
+    processes.forEach((proc, i) => {
+      const color = PROCESS_COLORS[proc.process_type] ?? "#aaa";
+      const procLabel = `Process ${i + 1}: ${PROCESS_LABELS[proc.process_type] ?? proc.process_type}`;
+      const procIsIP = proc.unit_system === "IP";
+      const procTUnit = procIsIP ? "°F" : "°C";
+      const procWUnit = procIsIP ? "gr/lb" : "g/kg";
+
+      // Path line
+      t.push({
+        x: proc.path_points.map((p) => p.Tdb),
+        y: proc.path_points.map((p) => p.W_display),
+        mode: "lines",
+        type: "scatter",
+        line: { color, width: 2.5, dash: "solid" },
+        name: procLabel,
+        legendgroup: `proc-${i}`,
+        showlegend: true,
+        hoverinfo: "skip",
+      });
+
+      // Start point marker
+      const sp = proc.start_point;
+      t.push({
+        x: [sp.Tdb],
+        y: [sp.W_display],
+        mode: "markers",
+        type: "scatter",
+        marker: {
+          color,
+          size: 9,
+          symbol: "circle",
+          line: { color: "#fff", width: 1 },
+        },
+        name: `${procLabel} start`,
+        legendgroup: `proc-${i}`,
+        showlegend: false,
+        hovertemplate:
+          `<b>${procLabel} - Start</b><br>` +
+          `Tdb: ${fmt(sp.Tdb, 1)}${procTUnit}<br>` +
+          `RH: ${fmt(sp.RH, 1)}%<br>` +
+          `W: ${fmt(sp.W_display, 1)} ${procWUnit}` +
+          `<extra></extra>`,
+      });
+
+      // End point marker
+      const ep = proc.end_point;
+      t.push({
+        x: [ep.Tdb],
+        y: [ep.W_display],
+        mode: "markers",
+        type: "scatter",
+        marker: {
+          color,
+          size: 9,
+          symbol: "diamond",
+          line: { color: "#fff", width: 1 },
+        },
+        name: `${procLabel} end`,
+        legendgroup: `proc-${i}`,
+        showlegend: false,
+        hovertemplate:
+          `<b>${procLabel} - End</b><br>` +
+          `Tdb: ${fmt(ep.Tdb, 1)}${procTUnit}<br>` +
+          `RH: ${fmt(ep.RH, 1)}%<br>` +
+          `W: ${fmt(ep.W_display, 1)} ${procWUnit}` +
+          `<extra></extra>`,
+      });
+    });
+
     return t;
-  }, [chartData, statePoints]);
+  }, [chartData, statePoints, processes]);
 
   // Layout
   const layout = useMemo<Partial<Layout>>(() => {
     const ranges = chartData?.ranges;
     const isIP = unitSystem === "IP";
+
+    // Process direction arrows
+    const annotations = processes.map((proc) => {
+      const pts = proc.path_points;
+      const color = PROCESS_COLORS[proc.process_type] ?? "#aaa";
+      const fromIdx = Math.floor(pts.length * 0.4);
+      const toIdx = Math.floor(pts.length * 0.6);
+      const from = pts[fromIdx];
+      const to = pts[toIdx];
+      return {
+        x: to.Tdb,
+        y: to.W_display,
+        ax: from.Tdb,
+        ay: from.W_display,
+        xref: "x" as const,
+        yref: "y" as const,
+        axref: "x" as const,
+        ayref: "y" as const,
+        showarrow: true,
+        arrowhead: 3,
+        arrowsize: 1.5,
+        arrowwidth: 2,
+        arrowcolor: color,
+        opacity: 0.8,
+        text: "",
+      };
+    });
 
     return {
       autosize: true,
@@ -267,8 +380,9 @@ export default function PsychroChart() {
       },
       hovermode: "closest",
       dragmode: "pan",
+      annotations,
     };
-  }, [chartData, unitSystem]);
+  }, [chartData, unitSystem, processes]);
 
   const config: Partial<Config> = {
     responsive: true,

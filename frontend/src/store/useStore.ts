@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { UnitSystem, ChartData, StatePointOutput } from "../types/psychro";
+import type { UnitSystem, ChartData, StatePointOutput, ProcessOutput } from "../types/psychro";
 
 interface AppState {
   // Settings
@@ -29,6 +29,18 @@ interface AppState {
   addStatePoint: (sp: StatePointOutput) => void;
   removeStatePoint: (index: number) => void;
   clearStatePoints: () => void;
+
+  // Processes
+  processes: ProcessOutput[];
+  processLoading: boolean;
+  processError: string | null;
+
+  // Actions — processes
+  addProcess: (p: ProcessOutput) => void;
+  removeProcess: (index: number) => void;
+  clearProcesses: () => void;
+  setProcessLoading: (loading: boolean) => void;
+  setProcessError: (error: string | null) => void;
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -61,4 +73,19 @@ export const useStore = create<AppState>((set) => ({
       statePoints: state.statePoints.filter((_, i) => i !== index),
     })),
   clearStatePoints: () => set({ statePoints: [] }),
+
+  // Processes
+  processes: [],
+  processLoading: false,
+  processError: null,
+
+  addProcess: (p) =>
+    set((state) => ({ processes: [...state.processes, p] })),
+  removeProcess: (index) =>
+    set((state) => ({
+      processes: state.processes.filter((_, i) => i !== index),
+    })),
+  clearProcesses: () => set({ processes: [] }),
+  setProcessLoading: (loading) => set({ processLoading: loading }),
+  setProcessError: (error) => set({ processError: error, processLoading: false }),
 }));

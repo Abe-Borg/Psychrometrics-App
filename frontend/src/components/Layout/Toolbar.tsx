@@ -3,7 +3,7 @@ import { useStore } from "../../store/useStore";
 import { getPressureFromAltitude } from "../../api/client";
 
 export default function Toolbar() {
-  const { unitSystem, pressure, altitude, setUnitSystem, setPressure, setAltitude } = useStore();
+  const { unitSystem, pressure, altitude, setUnitSystem, setPressure, setAltitude, clearProcesses } = useStore();
   const [altInput, setAltInput] = useState(altitude.toString());
   const [pressInput, setPressInput] = useState(pressure.toFixed(3));
 
@@ -15,6 +15,7 @@ export default function Toolbar() {
       setAltitude(alt);
       setPressure(result.pressure);
       setPressInput(result.pressure.toFixed(3));
+      clearProcesses();
     } catch (e) {
       console.error("Failed to convert altitude:", e);
     }
@@ -24,6 +25,7 @@ export default function Toolbar() {
     const p = parseFloat(pressInput);
     if (isNaN(p) || p <= 0) return;
     setPressure(p);
+    clearProcesses();
   }
 
   function handleUnitToggle() {
@@ -34,6 +36,7 @@ export default function Toolbar() {
     setPressInput(newPressure.toFixed(newUnit === "IP" ? 3 : 0));
     setAltitude(0);
     setAltInput("0");
+    clearProcesses();
   }
 
   return (

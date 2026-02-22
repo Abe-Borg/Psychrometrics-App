@@ -1,5 +1,7 @@
 import StatePointForm from "../StatePoint/StatePointForm";
 import StatePointList from "../StatePoint/StatePointList";
+import ProcessBuilder from "../Process/ProcessBuilder";
+import ProcessList from "../Process/ProcessList";
 
 export default function Sidebar() {
   return (
@@ -21,6 +23,26 @@ export default function Sidebar() {
             State Points
           </h2>
           <StatePointList />
+        </section>
+
+        <div className="h-px bg-border" />
+
+        {/* Add process */}
+        <section>
+          <h2 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-3">
+            Add Process
+          </h2>
+          <ProcessBuilder />
+        </section>
+
+        <div className="h-px bg-border" />
+
+        {/* Process list */}
+        <section>
+          <h2 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-3">
+            Processes
+          </h2>
+          <ProcessList />
         </section>
       </div>
     </div>

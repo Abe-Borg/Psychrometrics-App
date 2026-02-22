@@ -27,6 +27,63 @@ export interface StatePointOutput {
   mu: number;
 }
 
+// --- Process types ---
+
+export type ProcessType =
+  | "sensible_heating"
+  | "sensible_cooling"
+  | "cooling_dehumidification"
+  | "adiabatic_mixing";
+
+export type SensibleMode = "target_tdb" | "delta_t" | "heat_and_airflow";
+export type CoolingDehumMode = "forward" | "reverse";
+
+export interface PathPoint {
+  Tdb: number;
+  W: number;
+  W_display: number;
+}
+
+export interface ProcessInput {
+  process_type: ProcessType;
+  unit_system: UnitSystem;
+  pressure: number;
+  start_point_pair: [string, string];
+  start_point_values: [number, number];
+
+  // Sensible heating/cooling
+  sensible_mode?: SensibleMode;
+  target_Tdb?: number;
+  delta_T?: number;
+  Q_sensible?: number;
+  airflow_cfm?: number;
+
+  // Cooling & dehumidification
+  cooling_dehum_mode?: CoolingDehumMode;
+  adp_Tdb?: number;
+  bypass_factor?: number;
+  leaving_Tdb?: number;
+  leaving_RH?: number;
+
+  // Adiabatic mixing
+  stream2_point_pair?: [string, string];
+  stream2_point_values?: [number, number];
+  mixing_fraction?: number;
+}
+
+export interface ProcessOutput {
+  process_type: ProcessType;
+  unit_system: UnitSystem;
+  pressure: number;
+  start_point: StatePointOutput;
+  end_point: StatePointOutput;
+  path_points: PathPoint[];
+  metadata: Record<string, unknown>;
+  warnings: string[];
+}
+
+// --- Chart types ---
+
 export interface ChartPoint {
   Tdb: number;
   W: number;
