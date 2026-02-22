@@ -196,6 +196,51 @@ export interface GSHROutput {
   warnings: string[];
 }
 
+// --- Airflow calc types ---
+
+export type CalcMode = "solve_q" | "solve_airflow" | "solve_delta";
+export type LoadType = "sensible" | "latent" | "total";
+
+export interface AirflowCalcInput {
+  calc_mode: CalcMode;
+  load_type: LoadType;
+  unit_system: UnitSystem;
+  pressure: number;
+  Q?: number;
+  airflow?: number;
+  delta?: number;
+  ref_Tdb?: number;
+  ref_W?: number;
+}
+
+export interface AirflowCalcOutput {
+  calc_mode: CalcMode;
+  load_type: LoadType;
+  unit_system: UnitSystem;
+  Q: number;
+  airflow: number;
+  delta: number;
+  C_factor: number;
+  air_density: number;
+  formula: string;
+}
+
+export interface CondensationCheckInput {
+  surface_temp: number;
+  state_pair: [string, string];
+  state_values: [number, number];
+  unit_system: UnitSystem;
+  pressure: number;
+}
+
+export interface CondensationCheckOutput {
+  is_condensing: boolean;
+  surface_temp: number;
+  dew_point: number;
+  margin: number;
+  unit_system: UnitSystem;
+}
+
 // --- Chart types ---
 
 export interface ChartPoint {

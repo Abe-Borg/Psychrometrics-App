@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { UnitSystem, ChartData, StatePointOutput, ProcessOutput, CoilOutput, SHRLineOutput, GSHROutput } from "../types/psychro";
+import type { UnitSystem, ChartData, StatePointOutput, ProcessOutput, CoilOutput, SHRLineOutput, GSHROutput, AirflowCalcOutput, CondensationCheckOutput } from "../types/psychro";
 
 interface AppState {
   // Settings
@@ -63,6 +63,16 @@ interface AppState {
   clearSHRLines: () => void;
   setGSHRResult: (result: GSHROutput | null) => void;
   clearGSHRResult: () => void;
+
+  // Airflow calc
+  airflowResult: AirflowCalcOutput | null;
+  condensationResult: CondensationCheckOutput | null;
+
+  // Actions — airflow
+  setAirflowResult: (result: AirflowCalcOutput | null) => void;
+  clearAirflowResult: () => void;
+  setCondensationResult: (result: CondensationCheckOutput | null) => void;
+  clearCondensationResult: () => void;
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -134,4 +144,13 @@ export const useStore = create<AppState>((set) => ({
   clearSHRLines: () => set({ shrLines: [] }),
   setGSHRResult: (result) => set({ gshrResult: result }),
   clearGSHRResult: () => set({ gshrResult: null }),
+
+  // Airflow calc
+  airflowResult: null,
+  condensationResult: null,
+
+  setAirflowResult: (result) => set({ airflowResult: result }),
+  clearAirflowResult: () => set({ airflowResult: null }),
+  setCondensationResult: (result) => set({ condensationResult: result }),
+  clearCondensationResult: () => set({ condensationResult: null }),
 }));
