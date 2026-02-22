@@ -4,6 +4,7 @@ import ProcessBuilder from "../Process/ProcessBuilder";
 import ProcessList from "../Process/ProcessList";
 import CoilAnalysis from "../Coil/CoilAnalysis";
 import SHRPanel from "../SHR/SHRPanel";
+import AirflowCalc from "../Airflow/AirflowCalc";
 
 export default function Sidebar() {
   return (
@@ -65,6 +66,16 @@ export default function Sidebar() {
             SHR Tools
           </h2>
           <SHRPanel />
+        </section>
+
+        <div className="h-px bg-border" />
+
+        {/* Airflow calculator */}
+        <section>
+          <h2 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-3">
+            Airflow Calculator
+          </h2>
+          <AirflowCalc />
         </section>
       </div>
     </div>

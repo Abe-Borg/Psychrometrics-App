@@ -1,4 +1,4 @@
-import type { ChartData, StatePointInput, StatePointOutput, ProcessInput, ProcessOutput, CoilInput, CoilOutput, SHRLineInput, SHRLineOutput, GSHRInput, GSHROutput, UnitSystem } from "../types/psychro";
+import type { ChartData, StatePointInput, StatePointOutput, ProcessInput, ProcessOutput, CoilInput, CoilOutput, SHRLineInput, SHRLineOutput, GSHRInput, GSHROutput, AirflowCalcInput, AirflowCalcOutput, CondensationCheckInput, CondensationCheckOutput, UnitSystem } from "../types/psychro";
 
 const BASE_URL = "/api/v1";
 
@@ -65,6 +65,24 @@ export async function calculateGSHR(
   input: GSHRInput
 ): Promise<GSHROutput> {
   return fetchJSON<GSHROutput>(`${BASE_URL}/shr/gshr`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function calculateAirflow(
+  input: AirflowCalcInput
+): Promise<AirflowCalcOutput> {
+  return fetchJSON<AirflowCalcOutput>(`${BASE_URL}/airflow-calc`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function checkCondensation(
+  input: CondensationCheckInput
+): Promise<CondensationCheckOutput> {
+  return fetchJSON<CondensationCheckOutput>(`${BASE_URL}/condensation-check`, {
     method: "POST",
     body: JSON.stringify(input),
   });
