@@ -1,13 +1,16 @@
 import { useState } from "react";
 import { useStore } from "../../store/useStore";
 import { calculateProcess } from "../../api/client";
-import type { ProcessType, SensibleMode, CoolingDehumMode } from "../../types/psychro";
+import type { ProcessType, SensibleMode, CoolingDehumMode, HumidificationMode } from "../../types/psychro";
 
 const PROCESS_TYPES: { value: ProcessType; label: string }[] = [
   { value: "sensible_heating", label: "Sensible Heating" },
   { value: "sensible_cooling", label: "Sensible Cooling" },
   { value: "cooling_dehumidification", label: "Cooling & Dehumidification" },
   { value: "adiabatic_mixing", label: "Adiabatic Mixing" },
+  { value: "steam_humidification", label: "Steam Humidification" },
+  { value: "adiabatic_humidification", label: "Adiabatic Humidification" },
+  { value: "heated_water_humidification", label: "Heated Water Spray" },
 ];
 
 const INPUT_PAIRS: { value: [string, string]; label: string }[] = [
@@ -29,6 +32,16 @@ const SENSIBLE_MODES: { value: SensibleMode; label: string }[] = [
 const COOLING_MODES: { value: CoolingDehumMode; label: string }[] = [
   { value: "forward", label: "Forward (ADP + BF)" },
   { value: "reverse", label: "Reverse (Leaving conditions)" },
+];
+
+const STEAM_MODES: { value: HumidificationMode; label: string }[] = [
+  { value: "target_rh", label: "Target RH" },
+  { value: "target_w", label: "Target W" },
+];
+
+const ADIABATIC_HUMID_MODES: { value: HumidificationMode; label: string }[] = [
+  { value: "effectiveness", label: "Effectiveness" },
+  { value: "target_rh", label: "Target RH" },
 ];
 
 function getFieldLabels(
@@ -90,6 +103,13 @@ export default function ProcessBuilder() {
   const [stream2Val2, setStream2Val2] = useState("");
   const [mixingFraction, setMixingFraction] = useState("");
 
+  // Humidification
+  const [humidMode, setHumidMode] = useState<HumidificationMode>("target_rh");
+  const [targetRH, setTargetRH] = useState("");
+  const [targetW, setTargetW] = useState("");
+  const [effectiveness, setEffectiveness] = useState("");
+  const [waterTemperature, setWaterTemperature] = useState("");
+
   // General
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -114,6 +134,11 @@ export default function ProcessBuilder() {
     setStream2Val1("");
     setStream2Val2("");
     setMixingFraction("");
+    setHumidMode("target_rh");
+    setTargetRH("");
+    setTargetW("");
+    setEffectiveness("");
+    setWaterTemperature("");
     setError(null);
   }
 
@@ -181,6 +206,36 @@ export default function ProcessBuilder() {
       input.stream2_point_pair = INPUT_PAIRS[stream2PairIndex].value;
       input.stream2_point_values = [s2v1, s2v2];
       input.mixing_fraction = mf;
+    } else if (processType === "steam_humidification") {
+      input.humidification_mode = humidMode;
+      if (humidMode === "target_rh") {
+        const rh = parseFloat(targetRH);
+        if (isNaN(rh)) { setError("Enter a valid target RH"); return; }
+        input.target_RH = rh;
+      } else if (humidMode === "target_w") {
+        const w = parseFloat(targetW);
+        if (isNaN(w)) { setError("Enter a valid target W"); return; }
+        input.target_W = w;
+      }
+    } else if (processType === "adiabatic_humidification") {
+      input.humidification_mode = humidMode;
+      if (humidMode === "effectiveness") {
+        const eff = parseFloat(effectiveness);
+        if (isNaN(eff)) { setError("Enter a valid effectiveness"); return; }
+        if (eff < 0 || eff > 1) { setError("Effectiveness must be between 0 and 1"); return; }
+        input.effectiveness = eff;
+      } else if (humidMode === "target_rh") {
+        const rh = parseFloat(targetRH);
+        if (isNaN(rh)) { setError("Enter a valid target RH"); return; }
+        input.target_RH = rh;
+      }
+    } else if (processType === "heated_water_humidification") {
+      const eff = parseFloat(effectiveness);
+      const wt = parseFloat(waterTemperature);
+      if (isNaN(eff) || isNaN(wt)) { setError("Enter valid effectiveness and water temperature"); return; }
+      if (eff < 0 || eff > 1) { setError("Effectiveness must be between 0 and 1"); return; }
+      input.effectiveness = eff;
+      input.water_temperature = wt;
     }
 
     setLoading(true);
@@ -489,6 +544,138 @@ export default function ProcessBuilder() {
             />
           </div>
         </>
+      )}
+
+      {/* --- Steam humidification parameters --- */}
+      {processType === "steam_humidification" && (
+        <>
+          <div>
+            <label className="block text-xs text-text-muted mb-1">Mode</label>
+            <select
+              value={humidMode}
+              onChange={(e) => setHumidMode(e.target.value as HumidificationMode)}
+              className={selectClass}
+            >
+              {STEAM_MODES.map((m) => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {humidMode === "target_rh" && (
+            <div>
+              <label className="block text-xs text-text-muted mb-1">Target RH (%)</label>
+              <input
+                type="number"
+                value={targetRH}
+                onChange={(e) => setTargetRH(e.target.value)}
+                min={0}
+                max={100}
+                step={1}
+                placeholder="—"
+                className={inputClass}
+              />
+            </div>
+          )}
+
+          {humidMode === "target_w" && (
+            <div>
+              <label className="block text-xs text-text-muted mb-1">
+                {isIP ? "Target W (lb/lb)" : "Target W (kg/kg)"}
+              </label>
+              <input
+                type="number"
+                value={targetW}
+                onChange={(e) => setTargetW(e.target.value)}
+                step={0.0001}
+                placeholder="—"
+                className={inputClass}
+              />
+            </div>
+          )}
+        </>
+      )}
+
+      {/* --- Adiabatic humidification parameters --- */}
+      {processType === "adiabatic_humidification" && (
+        <>
+          <div>
+            <label className="block text-xs text-text-muted mb-1">Mode</label>
+            <select
+              value={humidMode}
+              onChange={(e) => setHumidMode(e.target.value as HumidificationMode)}
+              className={selectClass}
+            >
+              {ADIABATIC_HUMID_MODES.map((m) => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {humidMode === "effectiveness" && (
+            <div>
+              <label className="block text-xs text-text-muted mb-1">Effectiveness (0–1)</label>
+              <input
+                type="number"
+                value={effectiveness}
+                onChange={(e) => setEffectiveness(e.target.value)}
+                min={0}
+                max={1}
+                step={0.01}
+                placeholder="—"
+                className={inputClass}
+              />
+            </div>
+          )}
+
+          {humidMode === "target_rh" && (
+            <div>
+              <label className="block text-xs text-text-muted mb-1">Target RH (%)</label>
+              <input
+                type="number"
+                value={targetRH}
+                onChange={(e) => setTargetRH(e.target.value)}
+                min={0}
+                max={100}
+                step={1}
+                placeholder="—"
+                className={inputClass}
+              />
+            </div>
+          )}
+        </>
+      )}
+
+      {/* --- Heated water spray parameters --- */}
+      {processType === "heated_water_humidification" && (
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-xs text-text-muted mb-1">
+              {isIP ? "Water Temp (°F)" : "Water Temp (°C)"}
+            </label>
+            <input
+              type="number"
+              value={waterTemperature}
+              onChange={(e) => setWaterTemperature(e.target.value)}
+              step={1}
+              placeholder="—"
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-text-muted mb-1">Effectiveness (0–1)</label>
+            <input
+              type="number"
+              value={effectiveness}
+              onChange={(e) => setEffectiveness(e.target.value)}
+              min={0}
+              max={1}
+              step={0.01}
+              placeholder="—"
+              className={inputClass}
+            />
+          </div>
+        </div>
       )}
 
       {/* Error */}

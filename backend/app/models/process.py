@@ -15,6 +15,9 @@ class ProcessType(str, Enum):
     SENSIBLE_COOLING = "sensible_cooling"
     COOLING_DEHUMIDIFICATION = "cooling_dehumidification"
     ADIABATIC_MIXING = "adiabatic_mixing"
+    STEAM_HUMIDIFICATION = "steam_humidification"
+    ADIABATIC_HUMIDIFICATION = "adiabatic_humidification"
+    HEATED_WATER_HUMIDIFICATION = "heated_water_humidification"
 
 
 class SensibleMode(str, Enum):
@@ -26,6 +29,12 @@ class SensibleMode(str, Enum):
 class CoolingDehumMode(str, Enum):
     FORWARD = "forward"  # ADP + BF → leaving state
     REVERSE = "reverse"  # entering + leaving → ADP + BF
+
+
+class HumidificationMode(str, Enum):
+    TARGET_RH = "target_rh"       # target relative humidity (0-100)
+    TARGET_W = "target_w"         # target humidity ratio (lb/lb or kg/kg)
+    EFFECTIVENESS = "effectiveness"  # humidifier effectiveness (0-1)
 
 
 class ProcessInput(BaseModel):
@@ -57,6 +66,13 @@ class ProcessInput(BaseModel):
     stream2_point_pair: Optional[tuple[str, str]] = None
     stream2_point_values: Optional[tuple[float, float]] = None
     mixing_fraction: Optional[float] = None  # stream 1 fraction: m1/(m1+m2)
+
+    # Humidification parameters (steam, adiabatic, heated water)
+    humidification_mode: Optional[HumidificationMode] = None
+    target_RH: Optional[float] = None       # target RH (0-100) for target_rh mode
+    target_W: Optional[float] = None        # target humidity ratio (lb/lb or kg/kg)
+    effectiveness: Optional[float] = None   # humidifier effectiveness (0-1)
+    water_temperature: Optional[float] = None  # spray water temp for heated water
 
 
 class PathPoint(BaseModel):
