@@ -36,7 +36,10 @@ export type ProcessType =
   | "adiabatic_mixing"
   | "steam_humidification"
   | "adiabatic_humidification"
-  | "heated_water_humidification";
+  | "heated_water_humidification"
+  | "direct_evaporative"
+  | "indirect_evaporative"
+  | "indirect_direct_evaporative";
 
 export type SensibleMode = "target_tdb" | "delta_t" | "heat_and_airflow";
 export type CoolingDehumMode = "forward" | "reverse";
@@ -80,6 +83,12 @@ export interface ProcessInput {
   target_W?: number;
   effectiveness?: number;
   water_temperature?: number;
+
+  // Evaporative cooling (direct, indirect, two-stage)
+  iec_effectiveness?: number;
+  dec_effectiveness?: number;
+  secondary_air_pair?: [string, string];
+  secondary_air_values?: [number, number];
 }
 
 export interface ProcessOutput {

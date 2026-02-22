@@ -11,6 +11,9 @@ const PROCESS_COLORS: Record<ProcessType, string> = {
   steam_humidification: "#5bf5a9",
   adiabatic_humidification: "#5bf5a9",
   heated_water_humidification: "#5bf5a9",
+  direct_evaporative: "#f5c45b",
+  indirect_evaporative: "#f5c45b",
+  indirect_direct_evaporative: "#f5c45b",
 };
 
 const PROCESS_LABELS: Record<ProcessType, string> = {
@@ -21,6 +24,9 @@ const PROCESS_LABELS: Record<ProcessType, string> = {
   steam_humidification: "Steam Humid.",
   adiabatic_humidification: "Adiabatic Humid.",
   heated_water_humidification: "Heated Water",
+  direct_evaporative: "Direct Evap.",
+  indirect_evaporative: "Indirect Evap.",
+  indirect_direct_evaporative: "IDEC (Two-Stage)",
 };
 
 function PropertyRow({ label, value }: { label: string; value: string }) {
@@ -293,6 +299,105 @@ function ProcessCard({
                   <PropertyRow
                     label="Delta h"
                     value={`${fmt(m.delta_h as number, 2)} ${hUnit}`}
+                  />
+                )}
+                {m.start_RH != null && (
+                  <PropertyRow label="Start RH" value={`${fmt(m.start_RH as number, 1)}%`} />
+                )}
+                {m.end_RH != null && (
+                  <PropertyRow label="End RH" value={`${fmt(m.end_RH as number, 1)}%`} />
+                )}
+              </>
+            )}
+
+            {/* Direct evaporative metadata */}
+            {proc.process_type === "direct_evaporative" && (
+              <>
+                {m.effectiveness != null && (
+                  <PropertyRow label="Effectiveness" value={fmt(m.effectiveness as number, 3)} />
+                )}
+                {m.Twb != null && (
+                  <PropertyRow label="Twb" value={`${fmt(m.Twb as number, 2)} ${tUnit}`} />
+                )}
+                {m.delta_Tdb != null && (
+                  <PropertyRow
+                    label="Delta Tdb"
+                    value={`${fmt(m.delta_Tdb as number, 2)} ${tUnit}`}
+                  />
+                )}
+                {m.delta_W_display != null && (
+                  <PropertyRow
+                    label="Delta W"
+                    value={`${fmt(m.delta_W_display as number, 2)} ${wUnit}`}
+                  />
+                )}
+                {m.start_RH != null && (
+                  <PropertyRow label="Start RH" value={`${fmt(m.start_RH as number, 1)}%`} />
+                )}
+                {m.end_RH != null && (
+                  <PropertyRow label="End RH" value={`${fmt(m.end_RH as number, 1)}%`} />
+                )}
+              </>
+            )}
+
+            {/* Indirect evaporative metadata */}
+            {proc.process_type === "indirect_evaporative" && (
+              <>
+                {m.effectiveness != null && (
+                  <PropertyRow label="Effectiveness" value={fmt(m.effectiveness as number, 3)} />
+                )}
+                {m.secondary_Twb != null && (
+                  <PropertyRow
+                    label="Sec. Twb"
+                    value={`${fmt(m.secondary_Twb as number, 2)} ${tUnit}`}
+                  />
+                )}
+                {m.delta_Tdb != null && (
+                  <PropertyRow
+                    label="Delta Tdb"
+                    value={`${fmt(m.delta_Tdb as number, 2)} ${tUnit}`}
+                  />
+                )}
+                {m.start_RH != null && (
+                  <PropertyRow label="Start RH" value={`${fmt(m.start_RH as number, 1)}%`} />
+                )}
+                {m.end_RH != null && (
+                  <PropertyRow label="End RH" value={`${fmt(m.end_RH as number, 1)}%`} />
+                )}
+              </>
+            )}
+
+            {/* Indirect-Direct two-stage metadata */}
+            {proc.process_type === "indirect_direct_evaporative" && (
+              <>
+                {m.iec_effectiveness != null && (
+                  <PropertyRow label="IEC Eff." value={fmt(m.iec_effectiveness as number, 3)} />
+                )}
+                {m.dec_effectiveness != null && (
+                  <PropertyRow label="DEC Eff." value={fmt(m.dec_effectiveness as number, 3)} />
+                )}
+                {m.secondary_Twb != null && (
+                  <PropertyRow
+                    label="Sec. Twb"
+                    value={`${fmt(m.secondary_Twb as number, 2)} ${tUnit}`}
+                  />
+                )}
+                {m.intermediate_Tdb != null && (
+                  <PropertyRow
+                    label="Mid Tdb"
+                    value={`${fmt(m.intermediate_Tdb as number, 2)} ${tUnit}`}
+                  />
+                )}
+                {m.delta_Tdb_total != null && (
+                  <PropertyRow
+                    label="Total Delta Tdb"
+                    value={`${fmt(m.delta_Tdb_total as number, 2)} ${tUnit}`}
+                  />
+                )}
+                {m.delta_W_display != null && (
+                  <PropertyRow
+                    label="Delta W"
+                    value={`${fmt(m.delta_W_display as number, 2)} ${wUnit}`}
                   />
                 )}
                 {m.start_RH != null && (

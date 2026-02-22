@@ -13,6 +13,11 @@ from app.engine.processes.humidification import (
     AdiabaticHumidificationSolver,
     HeatedWaterHumidificationSolver,
 )
+from app.engine.processes.evaporative import (
+    DirectEvaporativeSolver,
+    IndirectEvaporativeSolver,
+    IndirectDirectEvaporativeSolver,
+)
 
 router = APIRouter(prefix="/api/v1", tags=["process"])
 
@@ -25,6 +30,9 @@ _SOLVERS = {
     ProcessType.STEAM_HUMIDIFICATION: SteamHumidificationSolver(),
     ProcessType.ADIABATIC_HUMIDIFICATION: AdiabaticHumidificationSolver(),
     ProcessType.HEATED_WATER_HUMIDIFICATION: HeatedWaterHumidificationSolver(),
+    ProcessType.DIRECT_EVAPORATIVE: DirectEvaporativeSolver(),
+    ProcessType.INDIRECT_EVAPORATIVE: IndirectEvaporativeSolver(),
+    ProcessType.INDIRECT_DIRECT_EVAPORATIVE: IndirectDirectEvaporativeSolver(),
 }
 
 
