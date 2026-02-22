@@ -20,6 +20,20 @@
   --font-sans: "IBM Plex Sans", "SF Pro Display", system-ui, sans-serif;
 }
 
+/* Light theme overrides */
+[data-theme="light"] {
+  --color-bg-primary: #f5f6fa;
+  --color-bg-secondary: #ffffff;
+  --color-bg-tertiary: #eef0f5;
+  --color-border: #d4d8e8;
+  --color-border-hover: #b0b8d0;
+  --color-text-primary: #1a1d27;
+  --color-text-secondary: #5a6078;
+  --color-text-muted: #8890a8;
+  --color-accent: #4a8ce8;
+  --color-accent-hover: #3670c8;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -53,4 +67,79 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-border-hover);
+}
+
+/* Toolbar button base style */
+.toolbar-btn {
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.25rem;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  background: transparent;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+.toolbar-btn:hover {
+  border-color: var(--color-border-hover);
+  color: var(--color-text-primary);
+}
+
+/* Export dropdown menu item */
+.export-menu-item {
+  display: block;
+  width: 100%;
+  padding: 0.375rem 0.75rem;
+  text-align: left;
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.export-menu-item:hover {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+}
+
+/* Toast slide-in animation */
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+.animate-slide-in {
+  animation: slide-in 0.25s ease-out;
+}
+
+/* Print styles */
+@media print {
+  .toolbar-bar,
+  .sidebar-panel,
+  .drag-handle {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .flex-1.min-w-0 {
+    width: 100% !important;
+    height: 100vh !important;
+  }
+
+  /* Force chart to fill the page */
+  .js-plotly-plot {
+    width: 100% !important;
+    height: 90vh !important;
+  }
 }

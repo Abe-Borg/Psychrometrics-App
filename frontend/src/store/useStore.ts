@@ -1,5 +1,36 @@
 import { create } from "zustand";
 import type { UnitSystem, ChartData, StatePointOutput, ProcessOutput, CoilOutput, SHRLineOutput, GSHROutput, AirflowCalcOutput, CondensationCheckOutput } from "../types/psychro";
+import type { ProjectFile } from "../types/project";
+
+// Snapshot of undoable state
+interface StateSnapshot {
+  statePoints: StatePointOutput[];
+  processes: ProcessOutput[];
+  coilResult: CoilOutput | null;
+  shrLines: SHRLineOutput[];
+  gshrResult: GSHROutput | null;
+}
+
+// Toast notification
+export interface Toast {
+  id: string;
+  message: string;
+  type: "success" | "error" | "warning";
+}
+
+// Visibility toggles for chart layers
+export interface ChartVisibility {
+  rhLines: boolean;
+  twbLines: boolean;
+  enthalpyLines: boolean;
+  volumeLines: boolean;
+  statePoints: boolean;
+  processes: boolean;
+  coil: boolean;
+  shrLines: boolean;
+}
+
+const MAX_HISTORY = 50;
 
 interface AppState {
   // Settings
@@ -73,9 +104,63 @@ interface AppState {
   clearAirflowResult: () => void;
   setCondensationResult: (result: CondensationCheckOutput | null) => void;
   clearCondensationResult: () => void;
+
+  // --- Phase 6: Project save/load ---
+  projectTitle: string;
+  setProjectTitle: (title: string) => void;
+  exportProject: () => ProjectFile;
+  importProject: (data: ProjectFile) => void;
+  clearAll: () => void;
+
+  // --- Phase 6: Chart ref for image export ---
+  chartRef: HTMLElement | null;
+  setChartRef: (el: HTMLElement | null) => void;
+
+  // --- Phase 6: Click-to-add ---
+  pendingClickPoint: { Tdb: number; W_display: number } | null;
+  setPendingClickPoint: (pt: { Tdb: number; W_display: number } | null) => void;
+
+  // --- Phase 6: Right-click to start process ---
+  pendingProcessStartIndex: number | null;
+  setPendingProcessStartIndex: (index: number | null) => void;
+
+  // --- Phase 6: Selected state point ---
+  selectedPointIndex: number | null;
+  setSelectedPointIndex: (index: number | null) => void;
+
+  // --- Phase 6: Undo/redo ---
+  _history: StateSnapshot[];
+  _future: StateSnapshot[];
+  undo: () => void;
+  redo: () => void;
+  canUndo: () => boolean;
+  canRedo: () => boolean;
+
+  // --- Phase 6: Theme ---
+  theme: "dark" | "light";
+  toggleTheme: () => void;
+
+  // --- Phase 6: Chart visibility ---
+  visibility: ChartVisibility;
+  toggleVisibility: (key: keyof ChartVisibility) => void;
+
+  // --- Phase 6: Toasts ---
+  toasts: Toast[];
+  addToast: (message: string, type: Toast["type"]) => void;
+  removeToast: (id: string) => void;
 }
 
-export const useStore = create<AppState>((set) => ({
+function takeSnapshot(state: AppState): StateSnapshot {
+  return {
+    statePoints: state.statePoints,
+    processes: state.processes,
+    coilResult: state.coilResult,
+    shrLines: state.shrLines,
+    gshrResult: state.gshrResult,
+  };
+}
+
+export const useStore = create<AppState>((set, get) => ({
   // Default settings (IP, sea level)
   unitSystem: "IP",
   pressure: 14.696,
@@ -98,26 +183,68 @@ export const useStore = create<AppState>((set) => ({
   setChartLoading: (loading) => set({ chartLoading: loading }),
   setChartError: (error) => set({ chartError: error, chartLoading: false }),
 
-  addStatePoint: (sp) =>
-    set((state) => ({ statePoints: [...state.statePoints, sp] })),
-  removeStatePoint: (index) =>
-    set((state) => ({
+  addStatePoint: (sp) => {
+    const state = get();
+    const snapshot = takeSnapshot(state);
+    set({
+      statePoints: [...state.statePoints, sp],
+      _history: [...state._history, snapshot].slice(-MAX_HISTORY),
+      _future: [],
+    });
+  },
+  removeStatePoint: (index) => {
+    const state = get();
+    const snapshot = takeSnapshot(state);
+    set({
       statePoints: state.statePoints.filter((_, i) => i !== index),
-    })),
-  clearStatePoints: () => set({ statePoints: [] }),
+      selectedPointIndex: state.selectedPointIndex === index ? null : state.selectedPointIndex,
+      _history: [...state._history, snapshot].slice(-MAX_HISTORY),
+      _future: [],
+    });
+  },
+  clearStatePoints: () => {
+    const state = get();
+    const snapshot = takeSnapshot(state);
+    set({
+      statePoints: [],
+      selectedPointIndex: null,
+      _history: [...state._history, snapshot].slice(-MAX_HISTORY),
+      _future: [],
+    });
+  },
 
   // Processes
   processes: [],
   processLoading: false,
   processError: null,
 
-  addProcess: (p) =>
-    set((state) => ({ processes: [...state.processes, p] })),
-  removeProcess: (index) =>
-    set((state) => ({
+  addProcess: (p) => {
+    const state = get();
+    const snapshot = takeSnapshot(state);
+    set({
+      processes: [...state.processes, p],
+      _history: [...state._history, snapshot].slice(-MAX_HISTORY),
+      _future: [],
+    });
+  },
+  removeProcess: (index) => {
+    const state = get();
+    const snapshot = takeSnapshot(state);
+    set({
       processes: state.processes.filter((_, i) => i !== index),
-    })),
-  clearProcesses: () => set({ processes: [] }),
+      _history: [...state._history, snapshot].slice(-MAX_HISTORY),
+      _future: [],
+    });
+  },
+  clearProcesses: () => {
+    const state = get();
+    const snapshot = takeSnapshot(state);
+    set({
+      processes: [],
+      _history: [...state._history, snapshot].slice(-MAX_HISTORY),
+      _future: [],
+    });
+  },
   setProcessLoading: (loading) => set({ processLoading: loading }),
   setProcessError: (error) => set({ processError: error, processLoading: false }),
 
@@ -126,24 +253,78 @@ export const useStore = create<AppState>((set) => ({
   coilLoading: false,
   coilError: null,
 
-  setCoilResult: (result) => set({ coilResult: result, coilError: null }),
+  setCoilResult: (result) => {
+    const state = get();
+    const snapshot = takeSnapshot(state);
+    set({
+      coilResult: result,
+      coilError: null,
+      _history: [...state._history, snapshot].slice(-MAX_HISTORY),
+      _future: [],
+    });
+  },
   setCoilLoading: (loading) => set({ coilLoading: loading }),
   setCoilError: (error) => set({ coilError: error, coilLoading: false }),
-  clearCoilResult: () => set({ coilResult: null, coilError: null }),
+  clearCoilResult: () => {
+    const state = get();
+    const snapshot = takeSnapshot(state);
+    set({
+      coilResult: null,
+      coilError: null,
+      _history: [...state._history, snapshot].slice(-MAX_HISTORY),
+      _future: [],
+    });
+  },
 
   // SHR lines
   shrLines: [],
   gshrResult: null,
 
-  addSHRLine: (line) =>
-    set((state) => ({ shrLines: [...state.shrLines, line] })),
-  removeSHRLine: (index) =>
-    set((state) => ({
+  addSHRLine: (line) => {
+    const state = get();
+    const snapshot = takeSnapshot(state);
+    set({
+      shrLines: [...state.shrLines, line],
+      _history: [...state._history, snapshot].slice(-MAX_HISTORY),
+      _future: [],
+    });
+  },
+  removeSHRLine: (index) => {
+    const state = get();
+    const snapshot = takeSnapshot(state);
+    set({
       shrLines: state.shrLines.filter((_, i) => i !== index),
-    })),
-  clearSHRLines: () => set({ shrLines: [] }),
-  setGSHRResult: (result) => set({ gshrResult: result }),
-  clearGSHRResult: () => set({ gshrResult: null }),
+      _history: [...state._history, snapshot].slice(-MAX_HISTORY),
+      _future: [],
+    });
+  },
+  clearSHRLines: () => {
+    const state = get();
+    const snapshot = takeSnapshot(state);
+    set({
+      shrLines: [],
+      _history: [...state._history, snapshot].slice(-MAX_HISTORY),
+      _future: [],
+    });
+  },
+  setGSHRResult: (result) => {
+    const state = get();
+    const snapshot = takeSnapshot(state);
+    set({
+      gshrResult: result,
+      _history: [...state._history, snapshot].slice(-MAX_HISTORY),
+      _future: [],
+    });
+  },
+  clearGSHRResult: () => {
+    const state = get();
+    const snapshot = takeSnapshot(state);
+    set({
+      gshrResult: null,
+      _history: [...state._history, snapshot].slice(-MAX_HISTORY),
+      _future: [],
+    });
+  },
 
   // Airflow calc
   airflowResult: null,
@@ -153,4 +334,150 @@ export const useStore = create<AppState>((set) => ({
   clearAirflowResult: () => set({ airflowResult: null }),
   setCondensationResult: (result) => set({ condensationResult: result }),
   clearCondensationResult: () => set({ condensationResult: null }),
+
+  // --- Phase 6: Project save/load ---
+  projectTitle: "Untitled Project",
+  setProjectTitle: (title) => set({ projectTitle: title }),
+
+  exportProject: () => {
+    const state = get();
+    return {
+      version: "1.0" as const,
+      title: state.projectTitle,
+      savedAt: new Date().toISOString(),
+      unitSystem: state.unitSystem,
+      pressure: state.pressure,
+      altitude: state.altitude,
+      statePoints: state.statePoints,
+      processes: state.processes,
+      coilResult: state.coilResult,
+      shrLines: state.shrLines,
+      gshrResult: state.gshrResult,
+    };
+  },
+
+  importProject: (data) => {
+    const state = get();
+    const snapshot = takeSnapshot(state);
+    set({
+      projectTitle: data.title,
+      unitSystem: data.unitSystem,
+      pressure: data.pressure,
+      altitude: data.altitude,
+      statePoints: data.statePoints,
+      processes: data.processes,
+      coilResult: data.coilResult,
+      shrLines: data.shrLines,
+      gshrResult: data.gshrResult,
+      selectedPointIndex: null,
+      _history: [...state._history, snapshot].slice(-MAX_HISTORY),
+      _future: [],
+    });
+  },
+
+  clearAll: () => {
+    const state = get();
+    const snapshot = takeSnapshot(state);
+    set({
+      projectTitle: "Untitled Project",
+      statePoints: [],
+      processes: [],
+      coilResult: null,
+      shrLines: [],
+      gshrResult: null,
+      airflowResult: null,
+      condensationResult: null,
+      selectedPointIndex: null,
+      _history: [...state._history, snapshot].slice(-MAX_HISTORY),
+      _future: [],
+    });
+  },
+
+  // --- Phase 6: Chart ref ---
+  chartRef: null,
+  setChartRef: (el) => set({ chartRef: el }),
+
+  // --- Phase 6: Click-to-add ---
+  pendingClickPoint: null,
+  setPendingClickPoint: (pt) => set({ pendingClickPoint: pt }),
+
+  // --- Phase 6: Right-click to start process ---
+  pendingProcessStartIndex: null,
+  setPendingProcessStartIndex: (index) => set({ pendingProcessStartIndex: index }),
+
+  // --- Phase 6: Selected state point ---
+  selectedPointIndex: null,
+  setSelectedPointIndex: (index) => set({ selectedPointIndex: index }),
+
+  // --- Phase 6: Undo/redo ---
+  _history: [],
+  _future: [],
+
+  undo: () => {
+    const state = get();
+    if (state._history.length === 0) return;
+    const previous = state._history[state._history.length - 1];
+    const currentSnapshot = takeSnapshot(state);
+    set({
+      ...previous,
+      _history: state._history.slice(0, -1),
+      _future: [...state._future, currentSnapshot],
+    });
+  },
+
+  redo: () => {
+    const state = get();
+    if (state._future.length === 0) return;
+    const next = state._future[state._future.length - 1];
+    const currentSnapshot = takeSnapshot(state);
+    set({
+      ...next,
+      _future: state._future.slice(0, -1),
+      _history: [...state._history, currentSnapshot].slice(-MAX_HISTORY),
+    });
+  },
+
+  canUndo: () => get()._history.length > 0,
+  canRedo: () => get()._future.length > 0,
+
+  // --- Phase 6: Theme ---
+  theme: "dark",
+  toggleTheme: () => {
+    const state = get();
+    const newTheme = state.theme === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = newTheme;
+    set({ theme: newTheme });
+  },
+
+  // --- Phase 6: Chart visibility ---
+  visibility: {
+    rhLines: true,
+    twbLines: true,
+    enthalpyLines: true,
+    volumeLines: true,
+    statePoints: true,
+    processes: true,
+    coil: true,
+    shrLines: true,
+  },
+  toggleVisibility: (key) =>
+    set((state) => ({
+      visibility: { ...state.visibility, [key]: !state.visibility[key] },
+    })),
+
+  // --- Phase 6: Toasts ---
+  toasts: [],
+  addToast: (message, type) => {
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    set((state) => ({
+      toasts: [...state.toasts, { id, message, type }],
+    }));
+    setTimeout(() => {
+      get().removeToast(id);
+    }, 4000);
+  },
+  removeToast: (id) =>
+    set((state) => ({
+      toasts: state.toasts.filter((t) => t.id !== id),
+    })),
 }));

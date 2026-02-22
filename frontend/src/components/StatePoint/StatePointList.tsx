@@ -20,10 +20,14 @@ function PropertyRow({ label, value }: { label: string; value: string }) {
 function StatePointCard({
   sp,
   index,
+  isSelected,
+  onSelect,
   onRemove,
 }: {
   sp: StatePointOutput;
   index: number;
+  isSelected: boolean;
+  onSelect: () => void;
   onRemove: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -31,11 +35,18 @@ function StatePointCard({
   const isIP = sp.unit_system === "IP";
 
   return (
-    <div className="border border-border rounded bg-bg-primary">
+    <div
+      className={`border rounded bg-bg-primary transition-colors ${
+        isSelected ? "border-accent ring-1 ring-accent/40" : "border-border"
+      }`}
+    >
       {/* Header */}
       <div
         className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-bg-tertiary/50 transition-colors"
-        onClick={() => setExpanded(!expanded)}
+        onClick={() => {
+          onSelect();
+          setExpanded(!expanded);
+        }}
       >
         <div
           className="w-2.5 h-2.5 rounded-full flex-shrink-0"
@@ -55,7 +66,7 @@ function StatePointCard({
           className="text-text-muted hover:text-red-400 transition-colors text-xs px-1 cursor-pointer"
           title="Remove point"
         >
-          ✕
+          &#10005;
         </button>
       </div>
 
@@ -85,12 +96,12 @@ function StatePointCard({
 }
 
 export default function StatePointList() {
-  const { statePoints, removeStatePoint, clearStatePoints } = useStore();
+  const { statePoints, removeStatePoint, clearStatePoints, selectedPointIndex, setSelectedPointIndex } = useStore();
 
   if (statePoints.length === 0) {
     return (
       <p className="text-xs text-text-muted italic">
-        No points defined. Add one above.
+        No points defined. Add one above or click on the chart.
       </p>
     );
   }
@@ -102,6 +113,8 @@ export default function StatePointList() {
           key={`${sp.label}-${i}`}
           sp={sp}
           index={i}
+          isSelected={selectedPointIndex === i}
+          onSelect={() => setSelectedPointIndex(selectedPointIndex === i ? null : i)}
           onRemove={() => removeStatePoint(i)}
         />
       ))}

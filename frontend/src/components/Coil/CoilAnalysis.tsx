@@ -47,7 +47,7 @@ const inputClass =
   "w-full px-2 py-1.5 bg-bg-tertiary border border-border rounded text-sm text-text-primary focus:outline-none focus:border-accent";
 
 export default function CoilAnalysis() {
-  const { unitSystem, pressure, setCoilResult, coilResult } = useStore();
+  const { unitSystem, pressure, setCoilResult, coilResult, addToast } = useStore();
   const isIP = unitSystem === "IP";
 
   // Mode
@@ -130,8 +130,11 @@ export default function CoilAnalysis() {
     try {
       const result = await analyzeCoil(input);
       setCoilResult(result);
+      addToast("Coil analysis complete", "success");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Coil analysis failed");
+      const msg = e instanceof Error ? e.message : "Coil analysis failed";
+      setError(msg);
+      addToast(msg, "error");
     } finally {
       setLoading(false);
     }

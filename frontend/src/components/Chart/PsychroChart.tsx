@@ -1,13 +1,14 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import Plot from "react-plotly.js";
-import type { Data, Layout, Config, PlotHoverEvent } from "plotly.js";
+import type { Data, Layout, Config, PlotHoverEvent, PlotMouseEvent } from "plotly.js";
 import { useStore } from "../../store/useStore";
 import { getChartData } from "../../api/client";
 import { fmt } from "../../utils/formatting";
 import { calcPropertiesAtCursor, type HoverProperties } from "../../utils/hoverCalc";
+import ChartLegend from "./ChartLegend";
 
-// Chart line colors — reference our CSS custom properties conceptually
-const COLORS = {
+// Chart line colors — dark theme
+const COLORS_DARK = {
   saturation: "#f5725b",
   rh: "#5b9cf5",
   twb: "#5bf5a9",
@@ -19,6 +20,25 @@ const COLORS = {
   paper: "#0f1117",
   text: "#9399b2",
   textBright: "#e8eaf0",
+  legendBg: "rgba(15,17,23,0.85)",
+  annotationBg: "rgba(15,17,23,0.8)",
+};
+
+// Chart line colors — light theme
+const COLORS_LIGHT = {
+  saturation: "#d94030",
+  rh: "#3a7ae0",
+  twb: "#1fad6e",
+  enthalpy: "#c99520",
+  volume: "#9040d0",
+  statePoint: "#e04040",
+  grid: "#d4d8e8",
+  bg: "#f5f6fa",
+  paper: "#f5f6fa",
+  text: "#5a6078",
+  textBright: "#1a1d27",
+  legendBg: "rgba(255,255,255,0.9)",
+  annotationBg: "rgba(245,246,250,0.9)",
 };
 
 // Marker colors for state points — cycle through these
@@ -76,11 +96,31 @@ export default function PsychroChart() {
     coilResult,
     shrLines,
     gshrResult,
+    setChartRef,
+    setPendingClickPoint,
+    selectedPointIndex,
+    setSelectedPointIndex,
+    theme,
+    visibility,
   } = useStore();
+
+  const plotRef = useRef<HTMLDivElement>(null);
 
   // Hover tooltip state
   const [hoverProps, setHoverProps] = useState<HoverProperties | null>(null);
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
+
+  // Store chart ref for image export
+  useEffect(() => {
+    if (plotRef.current) {
+      // The actual Plotly div is the first child div with class "js-plotly-plot"
+      const plotlyDiv = plotRef.current.querySelector(".js-plotly-plot") as HTMLElement;
+      setChartRef(plotlyDiv || plotRef.current);
+    }
+    return () => setChartRef(null);
+  }, [chartData]);
+
+  const COLORS = theme === "light" ? COLORS_LIGHT : COLORS_DARK;
 
   const handleHover = useCallback(
     (event: Readonly<PlotHoverEvent>) => {
@@ -103,6 +143,35 @@ export default function PsychroChart() {
     setHoverProps(null);
     setHoverPos(null);
   }, []);
+
+  // Click-to-add: extract coordinates from chart click
+  const handleClick = useCallback(
+    (event: Readonly<PlotMouseEvent>) => {
+      const point = event.points?.[0];
+      if (!point) return;
+
+      // Check if clicking on a state point marker (customdata or curveNumber detection)
+      // State point traces have a specific name pattern; check the trace name
+      const traceName = (point.data as { name?: string }).name ?? "";
+
+      // Identify if this is a state point click — state points use "Point N" or custom labels
+      const spTraceIndex = statePoints.findIndex((sp, i) =>
+        traceName === (sp.label || `Point ${i + 1}`)
+      );
+
+      if (spTraceIndex >= 0) {
+        // Click on existing state point: select it
+        setSelectedPointIndex(spTraceIndex === selectedPointIndex ? null : spTraceIndex);
+        return;
+      }
+
+      // Click on empty chart area: set pending click point for auto-fill
+      const Tdb = point.x as number;
+      const W_display = point.y as number;
+      setPendingClickPoint({ Tdb, W_display });
+    },
+    [statePoints, selectedPointIndex, setPendingClickPoint, setSelectedPointIndex]
+  );
 
   // Fetch chart data when unit system or pressure changes
   useEffect(() => {
@@ -129,67 +198,75 @@ export default function PsychroChart() {
     const t: Data[] = [];
 
     // --- Constant volume lines (draw first, behind everything) ---
-    Object.entries(chartData.volume_lines).forEach(([label, points], i) => {
-      t.push({
-        x: points.map((p) => p.Tdb),
-        y: points.map((p) => p.W_display),
-        mode: "lines",
-        type: "scatter",
-        line: { color: COLORS.volume, width: 0.7, dash: "dot" },
-        name: `v=${label}`,
-        legendgroup: "volume",
-        showlegend: i === 0,
-        hoverinfo: "skip",
+    if (visibility.volumeLines) {
+      Object.entries(chartData.volume_lines).forEach(([label, points], i) => {
+        t.push({
+          x: points.map((p) => p.Tdb),
+          y: points.map((p) => p.W_display),
+          mode: "lines",
+          type: "scatter",
+          line: { color: COLORS.volume, width: 0.7, dash: "dot" },
+          name: `v=${label}`,
+          legendgroup: "volume",
+          showlegend: i === 0,
+          hoverinfo: "skip",
+        });
       });
-    });
+    }
 
     // --- Constant enthalpy lines ---
-    Object.entries(chartData.enthalpy_lines).forEach(([label, points], i) => {
-      t.push({
-        x: points.map((p) => p.Tdb),
-        y: points.map((p) => p.W_display),
-        mode: "lines",
-        type: "scatter",
-        line: { color: COLORS.enthalpy, width: 0.7, dash: "dashdot" },
-        name: `h=${label}`,
-        legendgroup: "enthalpy",
-        showlegend: i === 0,
-        hoverinfo: "skip",
+    if (visibility.enthalpyLines) {
+      Object.entries(chartData.enthalpy_lines).forEach(([label, points], i) => {
+        t.push({
+          x: points.map((p) => p.Tdb),
+          y: points.map((p) => p.W_display),
+          mode: "lines",
+          type: "scatter",
+          line: { color: COLORS.enthalpy, width: 0.7, dash: "dashdot" },
+          name: `h=${label}`,
+          legendgroup: "enthalpy",
+          showlegend: i === 0,
+          hoverinfo: "skip",
+        });
       });
-    });
+    }
 
     // --- Constant wet-bulb lines ---
-    Object.entries(chartData.twb_lines).forEach(([label, points], i) => {
-      t.push({
-        x: points.map((p) => p.Tdb),
-        y: points.map((p) => p.W_display),
-        mode: "lines",
-        type: "scatter",
-        line: { color: COLORS.twb, width: 0.8, dash: "dash" },
-        name: `Twb=${label}°`,
-        legendgroup: "twb",
-        showlegend: i === 0,
-        hoverinfo: "skip",
+    if (visibility.twbLines) {
+      Object.entries(chartData.twb_lines).forEach(([label, points], i) => {
+        t.push({
+          x: points.map((p) => p.Tdb),
+          y: points.map((p) => p.W_display),
+          mode: "lines",
+          type: "scatter",
+          line: { color: COLORS.twb, width: 0.8, dash: "dash" },
+          name: `Twb=${label}°`,
+          legendgroup: "twb",
+          showlegend: i === 0,
+          hoverinfo: "skip",
+        });
       });
-    });
+    }
 
     // --- Constant RH lines ---
-    Object.entries(chartData.rh_lines).forEach(([label, points], i) => {
-      t.push({
-        x: points.map((p) => p.Tdb),
-        y: points.map((p) => p.W_display),
-        mode: "lines",
-        type: "scatter",
-        line: { color: COLORS.rh, width: 0.9, dash: "solid" },
-        opacity: 0.5,
-        name: `${label}% RH`,
-        legendgroup: "rh",
-        showlegend: i === 0,
-        hoverinfo: "skip",
+    if (visibility.rhLines) {
+      Object.entries(chartData.rh_lines).forEach(([label, points], i) => {
+        t.push({
+          x: points.map((p) => p.Tdb),
+          y: points.map((p) => p.W_display),
+          mode: "lines",
+          type: "scatter",
+          line: { color: COLORS.rh, width: 0.9, dash: "solid" },
+          opacity: 0.5,
+          name: `${label}% RH`,
+          legendgroup: "rh",
+          showlegend: i === 0,
+          hoverinfo: "skip",
+        });
       });
-    });
+    }
 
-    // --- Saturation curve (100% RH) — on top ---
+    // --- Saturation curve (100% RH) — always visible ---
     t.push({
       x: chartData.saturation_curve.map((p) => p.Tdb),
       y: chartData.saturation_curve.map((p) => p.W_display),
@@ -202,10 +279,8 @@ export default function PsychroChart() {
     });
 
     // --- Hover mesh: invisible dense grid for cursor property detection ---
-    // We use the RH lines as hover targets since they cover the valid chart area
     const hoverX: number[] = [];
     const hoverY: number[] = [];
-    // Sample points from every RH line plus the saturation curve
     const allHoverSources = [
       ...Object.values(chartData.rh_lines),
       chartData.saturation_curve,
@@ -227,117 +302,121 @@ export default function PsychroChart() {
     });
 
     // --- State points ---
-    statePoints.forEach((sp, i) => {
-      const color = POINT_COLORS[i % POINT_COLORS.length];
-      const wUnit = sp.unit_system === "IP" ? "gr/lb" : "g/kg";
-      const tUnit = sp.unit_system === "IP" ? "°F" : "°C";
+    if (visibility.statePoints) {
+      statePoints.forEach((sp, i) => {
+        const color = POINT_COLORS[i % POINT_COLORS.length];
+        const wUnit = sp.unit_system === "IP" ? "gr/lb" : "g/kg";
+        const tUnit = sp.unit_system === "IP" ? "°F" : "°C";
+        const isSelected = selectedPointIndex === i;
 
-      t.push({
-        x: [sp.Tdb],
-        y: [sp.W_display],
-        mode: "text+markers" as const,
-        type: "scatter" as const,
-        marker: {
-          color,
-          size: 12,
-          symbol: "circle",
-          line: { color: "#fff", width: 1.5 },
-        },
-        text: [sp.label || `P${i + 1}`],
-        textposition: "top center",
-        textfont: { color: COLORS.textBright, size: 12, family: "IBM Plex Sans" },
-        name: sp.label || `Point ${i + 1}`,
-        legendgroup: `sp-${i}`,
-        hovertemplate:
-          `<b>${sp.label || `Point ${i + 1}`}</b><br>` +
-          `Tdb: ${fmt(sp.Tdb, 1)}${tUnit}<br>` +
-          `Twb: ${fmt(sp.Twb, 1)}${tUnit}<br>` +
-          `Tdp: ${fmt(sp.Tdp, 1)}${tUnit}<br>` +
-          `RH: ${fmt(sp.RH, 1)}%<br>` +
-          `W: ${fmt(sp.W_display, 1)} ${wUnit}<br>` +
-          `h: ${fmt(sp.h, 2)} ${sp.unit_system === "IP" ? "BTU/lb" : "kJ/kg"}<br>` +
-          `v: ${fmt(sp.v, 2)} ${sp.unit_system === "IP" ? "ft³/lb" : "m³/kg"}` +
-          `<extra></extra>`,
+        t.push({
+          x: [sp.Tdb],
+          y: [sp.W_display],
+          mode: "text+markers" as const,
+          type: "scatter" as const,
+          marker: {
+            color,
+            size: isSelected ? 16 : 12,
+            symbol: "circle",
+            line: { color: isSelected ? "#fff" : "#fff", width: isSelected ? 3 : 1.5 },
+          },
+          text: [sp.label || `P${i + 1}`],
+          textposition: "top center",
+          textfont: { color: COLORS.textBright, size: 12, family: "IBM Plex Sans" },
+          name: sp.label || `Point ${i + 1}`,
+          legendgroup: `sp-${i}`,
+          hovertemplate:
+            `<b>${sp.label || `Point ${i + 1}`}</b><br>` +
+            `Tdb: ${fmt(sp.Tdb, 1)}${tUnit}<br>` +
+            `Twb: ${fmt(sp.Twb, 1)}${tUnit}<br>` +
+            `Tdp: ${fmt(sp.Tdp, 1)}${tUnit}<br>` +
+            `RH: ${fmt(sp.RH, 1)}%<br>` +
+            `W: ${fmt(sp.W_display, 1)} ${wUnit}<br>` +
+            `h: ${fmt(sp.h, 2)} ${sp.unit_system === "IP" ? "BTU/lb" : "kJ/kg"}<br>` +
+            `v: ${fmt(sp.v, 2)} ${sp.unit_system === "IP" ? "ft³/lb" : "m³/kg"}` +
+            `<extra></extra>`,
+        });
       });
-    });
+    }
 
     // --- Process lines ---
-    processes.forEach((proc, i) => {
-      const color = PROCESS_COLORS[proc.process_type] ?? "#aaa";
-      const procLabel = `Process ${i + 1}: ${PROCESS_LABELS[proc.process_type] ?? proc.process_type}`;
-      const procIsIP = proc.unit_system === "IP";
-      const procTUnit = procIsIP ? "°F" : "°C";
-      const procWUnit = procIsIP ? "gr/lb" : "g/kg";
+    if (visibility.processes) {
+      processes.forEach((proc, i) => {
+        const color = PROCESS_COLORS[proc.process_type] ?? "#aaa";
+        const procLabel = `Process ${i + 1}: ${PROCESS_LABELS[proc.process_type] ?? proc.process_type}`;
+        const procIsIP = proc.unit_system === "IP";
+        const procTUnit = procIsIP ? "°F" : "°C";
+        const procWUnit = procIsIP ? "gr/lb" : "g/kg";
 
-      // Path line
-      t.push({
-        x: proc.path_points.map((p) => p.Tdb),
-        y: proc.path_points.map((p) => p.W_display),
-        mode: "lines",
-        type: "scatter",
-        line: { color, width: 2.5, dash: "solid" },
-        name: procLabel,
-        legendgroup: `proc-${i}`,
-        showlegend: true,
-        hoverinfo: "skip",
-      });
+        // Path line
+        t.push({
+          x: proc.path_points.map((p) => p.Tdb),
+          y: proc.path_points.map((p) => p.W_display),
+          mode: "lines",
+          type: "scatter",
+          line: { color, width: 2.5, dash: "solid" },
+          name: procLabel,
+          legendgroup: `proc-${i}`,
+          showlegend: true,
+          hoverinfo: "skip",
+        });
 
-      // Start point marker
-      const sp = proc.start_point;
-      t.push({
-        x: [sp.Tdb],
-        y: [sp.W_display],
-        mode: "markers",
-        type: "scatter",
-        marker: {
-          color,
-          size: 9,
-          symbol: "circle",
-          line: { color: "#fff", width: 1 },
-        },
-        name: `${procLabel} start`,
-        legendgroup: `proc-${i}`,
-        showlegend: false,
-        hovertemplate:
-          `<b>${procLabel} - Start</b><br>` +
-          `Tdb: ${fmt(sp.Tdb, 1)}${procTUnit}<br>` +
-          `RH: ${fmt(sp.RH, 1)}%<br>` +
-          `W: ${fmt(sp.W_display, 1)} ${procWUnit}` +
-          `<extra></extra>`,
-      });
+        // Start point marker
+        const sp = proc.start_point;
+        t.push({
+          x: [sp.Tdb],
+          y: [sp.W_display],
+          mode: "markers",
+          type: "scatter",
+          marker: {
+            color,
+            size: 9,
+            symbol: "circle",
+            line: { color: "#fff", width: 1 },
+          },
+          name: `${procLabel} start`,
+          legendgroup: `proc-${i}`,
+          showlegend: false,
+          hovertemplate:
+            `<b>${procLabel} - Start</b><br>` +
+            `Tdb: ${fmt(sp.Tdb, 1)}${procTUnit}<br>` +
+            `RH: ${fmt(sp.RH, 1)}%<br>` +
+            `W: ${fmt(sp.W_display, 1)} ${procWUnit}` +
+            `<extra></extra>`,
+        });
 
-      // End point marker
-      const ep = proc.end_point;
-      t.push({
-        x: [ep.Tdb],
-        y: [ep.W_display],
-        mode: "markers",
-        type: "scatter",
-        marker: {
-          color,
-          size: 9,
-          symbol: "diamond",
-          line: { color: "#fff", width: 1 },
-        },
-        name: `${procLabel} end`,
-        legendgroup: `proc-${i}`,
-        showlegend: false,
-        hovertemplate:
-          `<b>${procLabel} - End</b><br>` +
-          `Tdb: ${fmt(ep.Tdb, 1)}${procTUnit}<br>` +
-          `RH: ${fmt(ep.RH, 1)}%<br>` +
-          `W: ${fmt(ep.W_display, 1)} ${procWUnit}` +
-          `<extra></extra>`,
+        // End point marker
+        const ep = proc.end_point;
+        t.push({
+          x: [ep.Tdb],
+          y: [ep.W_display],
+          mode: "markers",
+          type: "scatter",
+          marker: {
+            color,
+            size: 9,
+            symbol: "diamond",
+            line: { color: "#fff", width: 1 },
+          },
+          name: `${procLabel} end`,
+          legendgroup: `proc-${i}`,
+          showlegend: false,
+          hovertemplate:
+            `<b>${procLabel} - End</b><br>` +
+            `Tdb: ${fmt(ep.Tdb, 1)}${procTUnit}<br>` +
+            `RH: ${fmt(ep.RH, 1)}%<br>` +
+            `W: ${fmt(ep.W_display, 1)} ${procWUnit}` +
+            `<extra></extra>`,
+        });
       });
-    });
+    }
 
     // --- Coil analysis path ---
-    if (coilResult) {
+    if (visibility.coil && coilResult) {
       const coilIsIP = coilResult.unit_system === "IP";
       const cTUnit = coilIsIP ? "°F" : "°C";
       const cWUnit = coilIsIP ? "gr/lb" : "g/kg";
 
-      // Coil process path line
       t.push({
         x: coilResult.path_points.map((p) => p.Tdb),
         y: coilResult.path_points.map((p) => p.W_display),
@@ -350,7 +429,6 @@ export default function PsychroChart() {
         hoverinfo: "skip",
       });
 
-      // Entering marker
       const ce = coilResult.entering;
       t.push({
         x: [ce.Tdb],
@@ -366,7 +444,6 @@ export default function PsychroChart() {
           `RH: ${fmt(ce.RH, 1)}%<br>W: ${fmt(ce.W_display, 1)} ${cWUnit}<extra></extra>`,
       });
 
-      // Leaving marker
       const cl = coilResult.leaving;
       t.push({
         x: [cl.Tdb],
@@ -382,7 +459,6 @@ export default function PsychroChart() {
           `RH: ${fmt(cl.RH, 1)}%<br>W: ${fmt(cl.W_display, 1)} ${cWUnit}<extra></extra>`,
       });
 
-      // ADP marker (star on saturation curve)
       const ca = coilResult.adp;
       t.push({
         x: [ca.Tdb],
@@ -400,155 +476,149 @@ export default function PsychroChart() {
     }
 
     // --- SHR lines ---
-    shrLines.forEach((shr, i) => {
-      const shrIsIP = shr.room_point.unit_system === "IP";
-      const sTUnit = shrIsIP ? "°F" : "°C";
-      const sWUnit = shrIsIP ? "gr/lb" : "g/kg";
-      const shrLabel = `SHR ${shr.shr.toFixed(2)}`;
+    if (visibility.shrLines) {
+      shrLines.forEach((shr, i) => {
+        const shrIsIP = shr.room_point.unit_system === "IP";
+        const sTUnit = shrIsIP ? "°F" : "°C";
+        const sWUnit = shrIsIP ? "gr/lb" : "g/kg";
+        const shrLabel = `SHR ${shr.shr.toFixed(2)}`;
 
-      // SHR line
-      t.push({
-        x: shr.line_points.map((p) => p.Tdb),
-        y: shr.line_points.map((p) => p.W_display),
-        mode: "lines",
-        type: "scatter",
-        line: { color: SHR_COLORS.room_shr, width: 2, dash: "dash" },
-        name: shrLabel,
-        legendgroup: `shr-${i}`,
-        showlegend: true,
-        hoverinfo: "skip",
-      });
-
-      // ADP marker
-      const sa = shr.adp;
-      t.push({
-        x: [sa.Tdb],
-        y: [sa.W_display],
-        mode: "markers",
-        type: "scatter",
-        marker: { color: SHR_COLORS.room_shr, size: 10, symbol: "star", line: { color: "#fff", width: 1 } },
-        name: `${shrLabel} ADP`,
-        legendgroup: `shr-${i}`,
-        showlegend: false,
-        hovertemplate:
-          `<b>${shrLabel} ADP</b><br>Tdb: ${fmt(sa.Tdb, 1)}${sTUnit}<br>` +
-          `RH: ${fmt(sa.RH, 1)}%<br>W: ${fmt(sa.W_display, 1)} ${sWUnit}<extra></extra>`,
-      });
-    });
-
-    // --- GSHR / ESHR lines ---
-    if (gshrResult) {
-      const gIsIP = gshrResult.room_point.unit_system === "IP";
-      const gTUnit = gIsIP ? "°F" : "°C";
-      const gWUnit = gIsIP ? "gr/lb" : "g/kg";
-
-      // Room SHR line
-      t.push({
-        x: gshrResult.room_shr_line.map((p) => p.Tdb),
-        y: gshrResult.room_shr_line.map((p) => p.W_display),
-        mode: "lines",
-        type: "scatter",
-        line: { color: SHR_COLORS.room_shr, width: 2, dash: "dash" },
-        name: `Room SHR ${gshrResult.room_shr.toFixed(2)}`,
-        legendgroup: "gshr-room",
-        showlegend: true,
-        hoverinfo: "skip",
-      });
-
-      // Room SHR ADP
-      const grAdp = gshrResult.room_shr_adp;
-      t.push({
-        x: [grAdp.Tdb],
-        y: [grAdp.W_display],
-        mode: "markers",
-        type: "scatter",
-        marker: { color: SHR_COLORS.room_shr, size: 10, symbol: "star", line: { color: "#fff", width: 1 } },
-        name: "Room SHR ADP",
-        legendgroup: "gshr-room",
-        showlegend: false,
-        hovertemplate:
-          `<b>Room SHR ADP</b><br>Tdb: ${fmt(grAdp.Tdb, 1)}${gTUnit}<br>` +
-          `W: ${fmt(grAdp.W_display, 1)} ${gWUnit}<extra></extra>`,
-      });
-
-      // GSHR line
-      t.push({
-        x: gshrResult.gshr_line.map((p) => p.Tdb),
-        y: gshrResult.gshr_line.map((p) => p.W_display),
-        mode: "lines",
-        type: "scatter",
-        line: { color: SHR_COLORS.gshr, width: 2, dash: "dashdot" },
-        name: `GSHR ${gshrResult.gshr.toFixed(2)}`,
-        legendgroup: "gshr-grand",
-        showlegend: true,
-        hoverinfo: "skip",
-      });
-
-      // GSHR ADP
-      const ggAdp = gshrResult.gshr_adp;
-      t.push({
-        x: [ggAdp.Tdb],
-        y: [ggAdp.W_display],
-        mode: "markers",
-        type: "scatter",
-        marker: { color: SHR_COLORS.gshr, size: 10, symbol: "star", line: { color: "#fff", width: 1 } },
-        name: "GSHR ADP",
-        legendgroup: "gshr-grand",
-        showlegend: false,
-        hovertemplate:
-          `<b>GSHR ADP</b><br>Tdb: ${fmt(ggAdp.Tdb, 1)}${gTUnit}<br>` +
-          `W: ${fmt(ggAdp.W_display, 1)} ${gWUnit}<extra></extra>`,
-      });
-
-      // Mixed point marker
-      const mp = gshrResult.mixed_point;
-      t.push({
-        x: [mp.Tdb],
-        y: [mp.W_display],
-        mode: "markers",
-        type: "scatter",
-        marker: { color: SHR_COLORS.gshr, size: 9, symbol: "triangle-up", line: { color: "#fff", width: 1 } },
-        name: "Mixed Air",
-        legendgroup: "gshr-grand",
-        showlegend: false,
-        hovertemplate:
-          `<b>Mixed Air</b><br>Tdb: ${fmt(mp.Tdb, 1)}${gTUnit}<br>` +
-          `RH: ${fmt(mp.RH, 1)}%<br>W: ${fmt(mp.W_display, 1)} ${gWUnit}<extra></extra>`,
-      });
-
-      // ESHR line (if present)
-      if (gshrResult.eshr_line && gshrResult.eshr != null && gshrResult.eshr_adp) {
         t.push({
-          x: gshrResult.eshr_line.map((p) => p.Tdb),
-          y: gshrResult.eshr_line.map((p) => p.W_display),
+          x: shr.line_points.map((p) => p.Tdb),
+          y: shr.line_points.map((p) => p.W_display),
           mode: "lines",
           type: "scatter",
-          line: { color: SHR_COLORS.eshr, width: 2, dash: "dot" },
-          name: `ESHR ${gshrResult.eshr.toFixed(2)}`,
-          legendgroup: "gshr-eff",
+          line: { color: SHR_COLORS.room_shr, width: 2, dash: "dash" },
+          name: shrLabel,
+          legendgroup: `shr-${i}`,
           showlegend: true,
           hoverinfo: "skip",
         });
 
-        const geAdp = gshrResult.eshr_adp;
+        const sa = shr.adp;
         t.push({
-          x: [geAdp.Tdb],
-          y: [geAdp.W_display],
+          x: [sa.Tdb],
+          y: [sa.W_display],
           mode: "markers",
           type: "scatter",
-          marker: { color: SHR_COLORS.eshr, size: 10, symbol: "star", line: { color: "#fff", width: 1 } },
-          name: "ESHR ADP",
-          legendgroup: "gshr-eff",
+          marker: { color: SHR_COLORS.room_shr, size: 10, symbol: "star", line: { color: "#fff", width: 1 } },
+          name: `${shrLabel} ADP`,
+          legendgroup: `shr-${i}`,
           showlegend: false,
           hovertemplate:
-            `<b>ESHR ADP</b><br>Tdb: ${fmt(geAdp.Tdb, 1)}${gTUnit}<br>` +
-            `W: ${fmt(geAdp.W_display, 1)} ${gWUnit}<extra></extra>`,
+            `<b>${shrLabel} ADP</b><br>Tdb: ${fmt(sa.Tdb, 1)}${sTUnit}<br>` +
+            `RH: ${fmt(sa.RH, 1)}%<br>W: ${fmt(sa.W_display, 1)} ${sWUnit}<extra></extra>`,
         });
+      });
+
+      // --- GSHR / ESHR lines ---
+      if (gshrResult) {
+        const gIsIP = gshrResult.room_point.unit_system === "IP";
+        const gTUnit = gIsIP ? "°F" : "°C";
+        const gWUnit = gIsIP ? "gr/lb" : "g/kg";
+
+        t.push({
+          x: gshrResult.room_shr_line.map((p) => p.Tdb),
+          y: gshrResult.room_shr_line.map((p) => p.W_display),
+          mode: "lines",
+          type: "scatter",
+          line: { color: SHR_COLORS.room_shr, width: 2, dash: "dash" },
+          name: `Room SHR ${gshrResult.room_shr.toFixed(2)}`,
+          legendgroup: "gshr-room",
+          showlegend: true,
+          hoverinfo: "skip",
+        });
+
+        const grAdp = gshrResult.room_shr_adp;
+        t.push({
+          x: [grAdp.Tdb],
+          y: [grAdp.W_display],
+          mode: "markers",
+          type: "scatter",
+          marker: { color: SHR_COLORS.room_shr, size: 10, symbol: "star", line: { color: "#fff", width: 1 } },
+          name: "Room SHR ADP",
+          legendgroup: "gshr-room",
+          showlegend: false,
+          hovertemplate:
+            `<b>Room SHR ADP</b><br>Tdb: ${fmt(grAdp.Tdb, 1)}${gTUnit}<br>` +
+            `W: ${fmt(grAdp.W_display, 1)} ${gWUnit}<extra></extra>`,
+        });
+
+        t.push({
+          x: gshrResult.gshr_line.map((p) => p.Tdb),
+          y: gshrResult.gshr_line.map((p) => p.W_display),
+          mode: "lines",
+          type: "scatter",
+          line: { color: SHR_COLORS.gshr, width: 2, dash: "dashdot" },
+          name: `GSHR ${gshrResult.gshr.toFixed(2)}`,
+          legendgroup: "gshr-grand",
+          showlegend: true,
+          hoverinfo: "skip",
+        });
+
+        const ggAdp = gshrResult.gshr_adp;
+        t.push({
+          x: [ggAdp.Tdb],
+          y: [ggAdp.W_display],
+          mode: "markers",
+          type: "scatter",
+          marker: { color: SHR_COLORS.gshr, size: 10, symbol: "star", line: { color: "#fff", width: 1 } },
+          name: "GSHR ADP",
+          legendgroup: "gshr-grand",
+          showlegend: false,
+          hovertemplate:
+            `<b>GSHR ADP</b><br>Tdb: ${fmt(ggAdp.Tdb, 1)}${gTUnit}<br>` +
+            `W: ${fmt(ggAdp.W_display, 1)} ${gWUnit}<extra></extra>`,
+        });
+
+        const mp = gshrResult.mixed_point;
+        t.push({
+          x: [mp.Tdb],
+          y: [mp.W_display],
+          mode: "markers",
+          type: "scatter",
+          marker: { color: SHR_COLORS.gshr, size: 9, symbol: "triangle-up", line: { color: "#fff", width: 1 } },
+          name: "Mixed Air",
+          legendgroup: "gshr-grand",
+          showlegend: false,
+          hovertemplate:
+            `<b>Mixed Air</b><br>Tdb: ${fmt(mp.Tdb, 1)}${gTUnit}<br>` +
+            `RH: ${fmt(mp.RH, 1)}%<br>W: ${fmt(mp.W_display, 1)} ${gWUnit}<extra></extra>`,
+        });
+
+        if (gshrResult.eshr_line && gshrResult.eshr != null && gshrResult.eshr_adp) {
+          t.push({
+            x: gshrResult.eshr_line.map((p) => p.Tdb),
+            y: gshrResult.eshr_line.map((p) => p.W_display),
+            mode: "lines",
+            type: "scatter",
+            line: { color: SHR_COLORS.eshr, width: 2, dash: "dot" },
+            name: `ESHR ${gshrResult.eshr.toFixed(2)}`,
+            legendgroup: "gshr-eff",
+            showlegend: true,
+            hoverinfo: "skip",
+          });
+
+          const geAdp = gshrResult.eshr_adp;
+          t.push({
+            x: [geAdp.Tdb],
+            y: [geAdp.W_display],
+            mode: "markers",
+            type: "scatter",
+            marker: { color: SHR_COLORS.eshr, size: 10, symbol: "star", line: { color: "#fff", width: 1 } },
+            name: "ESHR ADP",
+            legendgroup: "gshr-eff",
+            showlegend: false,
+            hovertemplate:
+              `<b>ESHR ADP</b><br>Tdb: ${fmt(geAdp.Tdb, 1)}${gTUnit}<br>` +
+              `W: ${fmt(geAdp.W_display, 1)} ${gWUnit}<extra></extra>`,
+          });
+        }
       }
     }
 
     return t;
-  }, [chartData, statePoints, processes, coilResult, shrLines, gshrResult]);
+  }, [chartData, statePoints, processes, coilResult, shrLines, gshrResult, selectedPointIndex, theme, visibility]);
 
   // Layout
   const layout = useMemo<Partial<Layout>>(() => {
@@ -556,7 +626,7 @@ export default function PsychroChart() {
     const isIP = unitSystem === "IP";
 
     // Process direction arrows + numbering labels
-    const arrowAnnotations = processes.map((proc) => {
+    const arrowAnnotations = visibility.processes ? processes.map((proc) => {
       const pts = proc.path_points;
       const color = PROCESS_COLORS[proc.process_type] ?? "#aaa";
       const fromIdx = Math.floor(pts.length * 0.4);
@@ -580,10 +650,9 @@ export default function PsychroChart() {
         opacity: 0.8,
         text: "",
       };
-    });
+    }) : [];
 
-    // Process number labels at midpoint of each process line
-    const numberAnnotations = processes.map((proc, i) => {
+    const numberAnnotations = visibility.processes ? processes.map((proc, i) => {
       const pts = proc.path_points;
       const color = PROCESS_COLORS[proc.process_type] ?? "#aaa";
       const midIdx = Math.floor(pts.length / 2);
@@ -596,17 +665,17 @@ export default function PsychroChart() {
         text: `<b>${i + 1}</b>`,
         showarrow: false,
         font: { size: 11, color, family: "IBM Plex Sans" },
-        bgcolor: "rgba(15,17,23,0.8)",
+        bgcolor: COLORS.annotationBg,
         bordercolor: color,
         borderwidth: 1,
         borderpad: 2,
         yshift: 12,
       };
-    });
+    }) : [];
 
     // Coil direction arrow
     const coilAnnotations: typeof arrowAnnotations = [];
-    if (coilResult && coilResult.path_points.length > 2) {
+    if (visibility.coil && coilResult && coilResult.path_points.length > 2) {
       const cpts = coilResult.path_points;
       const cFromIdx = Math.floor(cpts.length * 0.4);
       const cToIdx = Math.floor(cpts.length * 0.6);
@@ -665,7 +734,7 @@ export default function PsychroChart() {
         x: 1,
         y: 1,
         xanchor: "right",
-        bgcolor: "rgba(15,17,23,0.85)",
+        bgcolor: COLORS.legendBg,
         bordercolor: COLORS.grid,
         borderwidth: 1,
         font: { size: 11 },
@@ -674,7 +743,7 @@ export default function PsychroChart() {
       dragmode: "pan",
       annotations,
     };
-  }, [chartData, unitSystem, processes, coilResult, gshrResult]);
+  }, [chartData, unitSystem, processes, coilResult, gshrResult, theme, visibility]);
 
   const config: Partial<Config> = {
     responsive: true,
@@ -713,7 +782,7 @@ export default function PsychroChart() {
   const vUnit = isIP ? "ft³/lb" : "m³/kg";
 
   return (
-    <div className="w-full h-full relative">
+    <div className="w-full h-full relative" ref={plotRef}>
       <Plot
         data={traces}
         layout={layout}
@@ -722,7 +791,11 @@ export default function PsychroChart() {
         style={{ width: "100%", height: "100%" }}
         onHover={handleHover}
         onUnhover={handleUnhover}
+        onClick={handleClick}
       />
+
+      {/* Chart legend / visibility toggles */}
+      <ChartLegend />
 
       {/* Hover tooltip */}
       {hoverProps && hoverPos && (
