@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { UnitSystem, ChartData, StatePointOutput, ProcessOutput } from "../types/psychro";
+import type { UnitSystem, ChartData, StatePointOutput, ProcessOutput, CoilOutput, SHRLineOutput, GSHROutput } from "../types/psychro";
 
 interface AppState {
   // Settings
@@ -41,6 +41,28 @@ interface AppState {
   clearProcesses: () => void;
   setProcessLoading: (loading: boolean) => void;
   setProcessError: (error: string | null) => void;
+
+  // Coil analysis
+  coilResult: CoilOutput | null;
+  coilLoading: boolean;
+  coilError: string | null;
+
+  // Actions — coil
+  setCoilResult: (result: CoilOutput | null) => void;
+  setCoilLoading: (loading: boolean) => void;
+  setCoilError: (error: string | null) => void;
+  clearCoilResult: () => void;
+
+  // SHR lines
+  shrLines: SHRLineOutput[];
+  gshrResult: GSHROutput | null;
+
+  // Actions — SHR
+  addSHRLine: (line: SHRLineOutput) => void;
+  removeSHRLine: (index: number) => void;
+  clearSHRLines: () => void;
+  setGSHRResult: (result: GSHROutput | null) => void;
+  clearGSHRResult: () => void;
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -88,4 +110,28 @@ export const useStore = create<AppState>((set) => ({
   clearProcesses: () => set({ processes: [] }),
   setProcessLoading: (loading) => set({ processLoading: loading }),
   setProcessError: (error) => set({ processError: error, processLoading: false }),
+
+  // Coil analysis
+  coilResult: null,
+  coilLoading: false,
+  coilError: null,
+
+  setCoilResult: (result) => set({ coilResult: result, coilError: null }),
+  setCoilLoading: (loading) => set({ coilLoading: loading }),
+  setCoilError: (error) => set({ coilError: error, coilLoading: false }),
+  clearCoilResult: () => set({ coilResult: null, coilError: null }),
+
+  // SHR lines
+  shrLines: [],
+  gshrResult: null,
+
+  addSHRLine: (line) =>
+    set((state) => ({ shrLines: [...state.shrLines, line] })),
+  removeSHRLine: (index) =>
+    set((state) => ({
+      shrLines: state.shrLines.filter((_, i) => i !== index),
+    })),
+  clearSHRLines: () => set({ shrLines: [] }),
+  setGSHRResult: (result) => set({ gshrResult: result }),
+  clearGSHRResult: () => set({ gshrResult: null }),
 }));
