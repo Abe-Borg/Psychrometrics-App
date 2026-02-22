@@ -33,10 +33,14 @@ export type ProcessType =
   | "sensible_heating"
   | "sensible_cooling"
   | "cooling_dehumidification"
-  | "adiabatic_mixing";
+  | "adiabatic_mixing"
+  | "steam_humidification"
+  | "adiabatic_humidification"
+  | "heated_water_humidification";
 
 export type SensibleMode = "target_tdb" | "delta_t" | "heat_and_airflow";
 export type CoolingDehumMode = "forward" | "reverse";
+export type HumidificationMode = "target_rh" | "target_w" | "effectiveness";
 
 export interface PathPoint {
   Tdb: number;
@@ -69,6 +73,13 @@ export interface ProcessInput {
   stream2_point_pair?: [string, string];
   stream2_point_values?: [number, number];
   mixing_fraction?: number;
+
+  // Humidification (steam, adiabatic, heated water)
+  humidification_mode?: HumidificationMode;
+  target_RH?: number;
+  target_W?: number;
+  effectiveness?: number;
+  water_temperature?: number;
 }
 
 export interface ProcessOutput {

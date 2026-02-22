@@ -8,6 +8,11 @@ from app.models.process import ProcessInput, ProcessOutput, ProcessType
 from app.engine.processes.sensible import SensibleSolver
 from app.engine.processes.cooling_dehum import CoolingDehumSolver
 from app.engine.processes.mixing import MixingSolver
+from app.engine.processes.humidification import (
+    SteamHumidificationSolver,
+    AdiabaticHumidificationSolver,
+    HeatedWaterHumidificationSolver,
+)
 
 router = APIRouter(prefix="/api/v1", tags=["process"])
 
@@ -17,6 +22,9 @@ _SOLVERS = {
     ProcessType.SENSIBLE_COOLING: SensibleSolver(),
     ProcessType.COOLING_DEHUMIDIFICATION: CoolingDehumSolver(),
     ProcessType.ADIABATIC_MIXING: MixingSolver(),
+    ProcessType.STEAM_HUMIDIFICATION: SteamHumidificationSolver(),
+    ProcessType.ADIABATIC_HUMIDIFICATION: AdiabaticHumidificationSolver(),
+    ProcessType.HEATED_WATER_HUMIDIFICATION: HeatedWaterHumidificationSolver(),
 }
 
 

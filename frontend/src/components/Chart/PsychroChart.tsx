@@ -33,6 +33,9 @@ const PROCESS_COLORS: Record<string, string> = {
   sensible_cooling: "#ff9f43",
   cooling_dehumidification: "#54e0ff",
   adiabatic_mixing: "#e454ff",
+  steam_humidification: "#5bf5a9",
+  adiabatic_humidification: "#5bf5a9",
+  heated_water_humidification: "#5bf5a9",
 };
 
 const PROCESS_LABELS: Record<string, string> = {
@@ -40,6 +43,9 @@ const PROCESS_LABELS: Record<string, string> = {
   sensible_cooling: "Sensible Cooling",
   cooling_dehumidification: "Cooling & Dehum",
   adiabatic_mixing: "Adiabatic Mixing",
+  steam_humidification: "Steam Humid.",
+  adiabatic_humidification: "Adiabatic Humid.",
+  heated_water_humidification: "Heated Water",
 };
 
 export default function PsychroChart() {

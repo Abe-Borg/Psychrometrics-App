@@ -8,6 +8,9 @@ const PROCESS_COLORS: Record<ProcessType, string> = {
   sensible_cooling: "#ff9f43",
   cooling_dehumidification: "#54e0ff",
   adiabatic_mixing: "#e454ff",
+  steam_humidification: "#5bf5a9",
+  adiabatic_humidification: "#5bf5a9",
+  heated_water_humidification: "#5bf5a9",
 };
 
 const PROCESS_LABELS: Record<ProcessType, string> = {
@@ -15,6 +18,9 @@ const PROCESS_LABELS: Record<ProcessType, string> = {
   sensible_cooling: "Sensible Cooling",
   cooling_dehumidification: "Cooling & Dehum",
   adiabatic_mixing: "Adiabatic Mixing",
+  steam_humidification: "Steam Humid.",
+  adiabatic_humidification: "Adiabatic Humid.",
+  heated_water_humidification: "Heated Water",
 };
 
 function PropertyRow({ label, value }: { label: string; value: string }) {
@@ -201,6 +207,99 @@ function ProcessCard({
                     label="Mix h"
                     value={`${fmt(m.h_mix as number, 2)} ${hUnit}`}
                   />
+                )}
+              </>
+            )}
+
+            {/* Steam humidification metadata */}
+            {proc.process_type === "steam_humidification" && (
+              <>
+                {m.delta_W_display != null && (
+                  <PropertyRow
+                    label="Delta W"
+                    value={`${fmt(m.delta_W_display as number, 2)} ${wUnit}`}
+                  />
+                )}
+                {m.delta_h != null && (
+                  <PropertyRow
+                    label="Delta h"
+                    value={`${fmt(m.delta_h as number, 2)} ${hUnit}`}
+                  />
+                )}
+                {m.start_RH != null && (
+                  <PropertyRow label="Start RH" value={`${fmt(m.start_RH as number, 1)}%`} />
+                )}
+                {m.end_RH != null && (
+                  <PropertyRow label="End RH" value={`${fmt(m.end_RH as number, 1)}%`} />
+                )}
+              </>
+            )}
+
+            {/* Adiabatic humidification metadata */}
+            {proc.process_type === "adiabatic_humidification" && (
+              <>
+                {m.effectiveness != null && (
+                  <PropertyRow label="Effectiveness" value={fmt(m.effectiveness as number, 3)} />
+                )}
+                {m.Twb != null && (
+                  <PropertyRow label="Twb" value={`${fmt(m.Twb as number, 2)} ${tUnit}`} />
+                )}
+                {m.delta_Tdb != null && (
+                  <PropertyRow
+                    label="Delta Tdb"
+                    value={`${fmt(m.delta_Tdb as number, 2)} ${tUnit}`}
+                  />
+                )}
+                {m.delta_W_display != null && (
+                  <PropertyRow
+                    label="Delta W"
+                    value={`${fmt(m.delta_W_display as number, 2)} ${wUnit}`}
+                  />
+                )}
+                {m.start_RH != null && (
+                  <PropertyRow label="Start RH" value={`${fmt(m.start_RH as number, 1)}%`} />
+                )}
+                {m.end_RH != null && (
+                  <PropertyRow label="End RH" value={`${fmt(m.end_RH as number, 1)}%`} />
+                )}
+              </>
+            )}
+
+            {/* Heated water humidification metadata */}
+            {proc.process_type === "heated_water_humidification" && (
+              <>
+                {m.effectiveness != null && (
+                  <PropertyRow label="Effectiveness" value={fmt(m.effectiveness as number, 3)} />
+                )}
+                {m.water_temperature != null && (
+                  <PropertyRow
+                    label="Water Temp"
+                    value={`${fmt(m.water_temperature as number, 1)} ${tUnit}`}
+                  />
+                )}
+                {m.delta_Tdb != null && (
+                  <PropertyRow
+                    label="Delta Tdb"
+                    value={`${fmt(m.delta_Tdb as number, 2)} ${tUnit}`}
+                  />
+                )}
+                {m.delta_W_display != null && (
+                  <PropertyRow
+                    label="Delta W"
+                    value={`${fmt(m.delta_W_display as number, 2)} ${wUnit}`}
+                  />
+                )}
+                {m.delta_h != null && (
+                  <PropertyRow
+                    label="Delta h"
+                    value={`${fmt(m.delta_h as number, 2)} ${hUnit}`}
+                  />
+                )}
+                {m.start_RH != null && (
+                  <PropertyRow label="Start RH" value={`${fmt(m.start_RH as number, 1)}%`} />
+                )}
+                {m.end_RH != null && (
+                  <PropertyRow label="End RH" value={`${fmt(m.end_RH as number, 1)}%`} />
                 )}
               </>
             )}
