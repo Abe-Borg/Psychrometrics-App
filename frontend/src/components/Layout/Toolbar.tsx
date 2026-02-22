@@ -4,7 +4,8 @@ import { getPressureFromAltitude } from "../../api/client";
 import { downloadJSON, downloadCSV, downloadChartImage } from "../../utils/exportHelpers";
 import { generateReport } from "../../api/client";
 import type { ProjectFile } from "../../types/project";
-import Plotly from "plotly.js";
+import Plotly from "plotly.js-dist-min";
+import type { PlotlyHTMLElement } from "plotly.js";
 
 export default function Toolbar() {
   const {
@@ -173,7 +174,7 @@ export default function Toolbar() {
     try {
       addToast("Generating PDF report...", "success");
       // Capture chart as base64 PNG
-      const imgData = await Plotly.toImage(chartRef as Plotly.PlotlyHTMLElement, {
+      const imgData = await Plotly.toImage(chartRef as PlotlyHTMLElement, {
         format: "png",
         width: 1600,
         height: 900,

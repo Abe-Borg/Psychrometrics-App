@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
-import Plot from "react-plotly.js";
+import Plotly from "plotly.js-dist-min";
+import createPlotlyComponent from "react-plotly.js/factory";
 import type { Data, Layout, Config, PlotHoverEvent, PlotMouseEvent } from "plotly.js";
+
+const Plot = createPlotlyComponent(Plotly);
 import { useStore } from "../../store/useStore";
 import { getChartData } from "../../api/client";
 import { fmt } from "../../utils/formatting";
