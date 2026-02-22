@@ -41,7 +41,7 @@ const inputClass =
   "w-full px-2 py-1.5 bg-bg-tertiary border border-border rounded text-sm text-text-primary focus:outline-none focus:border-accent";
 
 export default function SHRPanel() {
-  const { unitSystem, pressure, addSHRLine, shrLines, removeSHRLine, clearSHRLines, setGSHRResult, gshrResult } = useStore();
+  const { unitSystem, pressure, addSHRLine, shrLines, removeSHRLine, clearSHRLines, setGSHRResult, gshrResult, addToast } = useStore();
   const isIP = unitSystem === "IP";
   const tUnit = isIP ? "°F" : "°C";
 
@@ -91,8 +91,11 @@ export default function SHRPanel() {
         shr,
       });
       addSHRLine(result);
+      addToast("SHR line added", "success");
     } catch (e) {
-      setShrError(e instanceof Error ? e.message : "SHR line calculation failed");
+      const msg = e instanceof Error ? e.message : "SHR line calculation failed";
+      setShrError(msg);
+      addToast(msg, "error");
     } finally {
       setShrLoading(false);
     }
@@ -138,8 +141,11 @@ export default function SHRPanel() {
     try {
       const result = await calculateGSHR(input);
       setGSHRResult(result);
+      addToast("GSHR calculated", "success");
     } catch (e) {
-      setGshrError(e instanceof Error ? e.message : "GSHR calculation failed");
+      const msg = e instanceof Error ? e.message : "GSHR calculation failed";
+      setGshrError(msg);
+      addToast(msg, "error");
     } finally {
       setGshrLoading(false);
     }

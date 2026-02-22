@@ -74,7 +74,7 @@ const inputClass =
   "w-full px-2 py-1.5 bg-bg-tertiary border border-border rounded text-sm text-text-primary focus:outline-none focus:border-accent";
 
 export default function AirflowCalc() {
-  const { unitSystem, pressure, processes, statePoints, airflowResult, setAirflowResult, condensationResult, setCondensationResult } = useStore();
+  const { unitSystem, pressure, processes, statePoints, airflowResult, setAirflowResult, condensationResult, setCondensationResult, addToast } = useStore();
   const isIP = unitSystem === "IP";
 
   // Airflow calc form
@@ -143,7 +143,9 @@ export default function AirflowCalc() {
       const result = await calculateAirflow(input);
       setAirflowResult(result);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Calculation failed");
+      const msg = e instanceof Error ? e.message : "Calculation failed";
+      setError(msg);
+      addToast(msg, "error");
     } finally {
       setLoading(false);
     }
@@ -190,7 +192,9 @@ export default function AirflowCalc() {
       });
       setCondensationResult(result);
     } catch (e) {
-      setCondError(e instanceof Error ? e.message : "Condensation check failed");
+      const msg = e instanceof Error ? e.message : "Condensation check failed";
+      setCondError(msg);
+      addToast(msg, "error");
     } finally {
       setCondLoading(false);
     }

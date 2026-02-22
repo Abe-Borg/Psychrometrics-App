@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useStore } from "../../store/useStore";
 import { calculateProcess } from "../../api/client";
 import { fmt } from "../../utils/formatting";
@@ -83,7 +83,7 @@ const inputClass =
   "w-full px-2 py-1.5 bg-bg-tertiary border border-border rounded text-sm text-text-primary focus:outline-none focus:border-accent";
 
 export default function ProcessBuilder() {
-  const { unitSystem, pressure, addProcess, processes } = useStore();
+  const { unitSystem, pressure, addProcess, processes, addToast, pendingProcessStartIndex, setPendingProcessStartIndex, statePoints } = useStore();
   const isIP = unitSystem === "IP";
 
   // Process type
@@ -134,6 +134,21 @@ export default function ProcessBuilder() {
   // General
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Handle right-click to start process from a state point
+  useEffect(() => {
+    if (pendingProcessStartIndex !== null) {
+      const sp = statePoints[pendingProcessStartIndex];
+      if (sp) {
+        setChainFromPrevious(false);
+        setStartPairIndex(0); // Tdb + RH
+        setStartVal1(sp.Tdb.toFixed(1));
+        setStartVal2(sp.RH.toFixed(1));
+        setError(null);
+        setPendingProcessStartIndex(null);
+      }
+    }
+  }, [pendingProcessStartIndex]);
 
   const startPair = INPUT_PAIRS[startPairIndex].value;
   const [startLabel1, startLabel2] = getFieldLabels(startPair, unitSystem);
@@ -311,8 +326,11 @@ export default function ProcessBuilder() {
     try {
       const result = await calculateProcess(input);
       addProcess(result);
+      addToast("Process added", "success");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Process calculation failed");
+      const msg = e instanceof Error ? e.message : "Process calculation failed";
+      setError(msg);
+      addToast(msg, "error");
     } finally {
       setLoading(false);
     }

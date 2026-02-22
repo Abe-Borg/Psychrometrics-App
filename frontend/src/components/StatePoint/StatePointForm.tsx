@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useStore } from "../../store/useStore";
 import { resolveStatePoint } from "../../api/client";
 
@@ -11,6 +11,9 @@ const INPUT_PAIRS: { value: [string, string]; label: string }[] = [
   { value: ["Twb", "RH"], label: "Twb + RH" },
   { value: ["Tdp", "RH"], label: "Tdp + RH" },
 ];
+
+// Index of "Tdb + W" pair for click-to-add
+const TDB_W_PAIR_INDEX = 3;
 
 function getFieldLabels(
   pair: [string, string],
@@ -35,13 +38,30 @@ function getFieldStep(prop: string): number {
 }
 
 export default function StatePointForm() {
-  const { unitSystem, pressure, addStatePoint } = useStore();
+  const { unitSystem, pressure, addStatePoint, pendingClickPoint, setPendingClickPoint, addToast } = useStore();
   const [pairIndex, setPairIndex] = useState(0);
   const [val1, setVal1] = useState("");
   const [val2, setVal2] = useState("");
   const [label, setLabel] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Handle click-to-add: auto-fill from chart click
+  useEffect(() => {
+    if (pendingClickPoint) {
+      const isIP = unitSystem === "IP";
+      // Convert W_display (gr/lb or g/kg) back to lb/lb or kg/kg
+      const wRaw = isIP
+        ? pendingClickPoint.W_display / 7000
+        : pendingClickPoint.W_display / 1000;
+
+      setPairIndex(TDB_W_PAIR_INDEX);
+      setVal1(pendingClickPoint.Tdb.toFixed(1));
+      setVal2(wRaw.toFixed(6));
+      setError(null);
+      setPendingClickPoint(null);
+    }
+  }, [pendingClickPoint]);
 
   const pair = INPUT_PAIRS[pairIndex].value;
   const [label1, label2] = getFieldLabels(pair, unitSystem);
@@ -67,12 +87,15 @@ export default function StatePointForm() {
         label: label || "",
       });
       addStatePoint(result);
+      addToast(`Point "${result.label || "P" + (useStore.getState().statePoints.length)}" added`, "success");
       // Reset form but keep pair selection
       setVal1("");
       setVal2("");
       setLabel("");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Calculation failed");
+      const msg = e instanceof Error ? e.message : "Calculation failed";
+      setError(msg);
+      addToast(msg, "error");
     } finally {
       setLoading(false);
     }
