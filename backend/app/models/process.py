@@ -18,6 +18,9 @@ class ProcessType(str, Enum):
     STEAM_HUMIDIFICATION = "steam_humidification"
     ADIABATIC_HUMIDIFICATION = "adiabatic_humidification"
     HEATED_WATER_HUMIDIFICATION = "heated_water_humidification"
+    DIRECT_EVAPORATIVE = "direct_evaporative"
+    INDIRECT_EVAPORATIVE = "indirect_evaporative"
+    INDIRECT_DIRECT_EVAPORATIVE = "indirect_direct_evaporative"
 
 
 class SensibleMode(str, Enum):
@@ -73,6 +76,12 @@ class ProcessInput(BaseModel):
     target_W: Optional[float] = None        # target humidity ratio (lb/lb or kg/kg)
     effectiveness: Optional[float] = None   # humidifier effectiveness (0-1)
     water_temperature: Optional[float] = None  # spray water temp for heated water
+
+    # Evaporative cooling parameters (direct, indirect, two-stage)
+    iec_effectiveness: Optional[float] = None  # indirect stage effectiveness (0-1)
+    dec_effectiveness: Optional[float] = None  # direct stage effectiveness (0-1)
+    secondary_air_pair: Optional[tuple[str, str]] = None  # secondary air input pair
+    secondary_air_values: Optional[tuple[float, float]] = None  # secondary air values
 
 
 class PathPoint(BaseModel):

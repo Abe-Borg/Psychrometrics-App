@@ -36,6 +36,9 @@ const PROCESS_COLORS: Record<string, string> = {
   steam_humidification: "#5bf5a9",
   adiabatic_humidification: "#5bf5a9",
   heated_water_humidification: "#5bf5a9",
+  direct_evaporative: "#f5c45b",
+  indirect_evaporative: "#f5c45b",
+  indirect_direct_evaporative: "#f5c45b",
 };
 
 const PROCESS_LABELS: Record<string, string> = {
@@ -46,6 +49,9 @@ const PROCESS_LABELS: Record<string, string> = {
   steam_humidification: "Steam Humid.",
   adiabatic_humidification: "Adiabatic Humid.",
   heated_water_humidification: "Heated Water",
+  direct_evaporative: "Direct Evap.",
+  indirect_evaporative: "Indirect Evap.",
+  indirect_direct_evaporative: "IDEC (Two-Stage)",
 };
 
 export default function PsychroChart() {

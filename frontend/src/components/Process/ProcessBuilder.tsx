@@ -11,6 +11,9 @@ const PROCESS_TYPES: { value: ProcessType; label: string }[] = [
   { value: "steam_humidification", label: "Steam Humidification" },
   { value: "adiabatic_humidification", label: "Adiabatic Humidification" },
   { value: "heated_water_humidification", label: "Heated Water Spray" },
+  { value: "direct_evaporative", label: "Direct Evaporative" },
+  { value: "indirect_evaporative", label: "Indirect Evaporative" },
+  { value: "indirect_direct_evaporative", label: "Indirect-Direct (Two-Stage)" },
 ];
 
 const INPUT_PAIRS: { value: [string, string]; label: string }[] = [
@@ -110,6 +113,10 @@ export default function ProcessBuilder() {
   const [effectiveness, setEffectiveness] = useState("");
   const [waterTemperature, setWaterTemperature] = useState("");
 
+  // Evaporative cooling
+  const [iecEffectiveness, setIecEffectiveness] = useState("");
+  const [decEffectiveness, setDecEffectiveness] = useState("");
+
   // General
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -139,6 +146,8 @@ export default function ProcessBuilder() {
     setTargetW("");
     setEffectiveness("");
     setWaterTemperature("");
+    setIecEffectiveness("");
+    setDecEffectiveness("");
     setError(null);
   }
 
@@ -236,6 +245,23 @@ export default function ProcessBuilder() {
       if (eff < 0 || eff > 1) { setError("Effectiveness must be between 0 and 1"); return; }
       input.effectiveness = eff;
       input.water_temperature = wt;
+    } else if (processType === "direct_evaporative") {
+      const eff = parseFloat(effectiveness);
+      if (isNaN(eff)) { setError("Enter a valid effectiveness"); return; }
+      if (eff < 0 || eff > 1) { setError("Effectiveness must be between 0 and 1"); return; }
+      input.effectiveness = eff;
+    } else if (processType === "indirect_evaporative") {
+      const eff = parseFloat(effectiveness);
+      if (isNaN(eff)) { setError("Enter a valid effectiveness"); return; }
+      if (eff < 0 || eff > 1) { setError("Effectiveness must be between 0 and 1"); return; }
+      input.effectiveness = eff;
+    } else if (processType === "indirect_direct_evaporative") {
+      const ie = parseFloat(iecEffectiveness);
+      const de = parseFloat(decEffectiveness);
+      if (isNaN(ie) || isNaN(de)) { setError("Enter valid IEC and DEC effectiveness values"); return; }
+      if (ie < 0 || ie > 1 || de < 0 || de > 1) { setError("Effectiveness must be between 0 and 1"); return; }
+      input.iec_effectiveness = ie;
+      input.dec_effectiveness = de;
     }
 
     setLoading(true);
@@ -668,6 +694,72 @@ export default function ProcessBuilder() {
               type="number"
               value={effectiveness}
               onChange={(e) => setEffectiveness(e.target.value)}
+              min={0}
+              max={1}
+              step={0.01}
+              placeholder="—"
+              className={inputClass}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* --- Direct evaporative parameters --- */}
+      {processType === "direct_evaporative" && (
+        <div>
+          <label className="block text-xs text-text-muted mb-1">Effectiveness (0–1)</label>
+          <input
+            type="number"
+            value={effectiveness}
+            onChange={(e) => setEffectiveness(e.target.value)}
+            min={0}
+            max={1}
+            step={0.01}
+            placeholder="—"
+            className={inputClass}
+          />
+        </div>
+      )}
+
+      {/* --- Indirect evaporative parameters --- */}
+      {processType === "indirect_evaporative" && (
+        <div>
+          <label className="block text-xs text-text-muted mb-1">Effectiveness (0–1)</label>
+          <input
+            type="number"
+            value={effectiveness}
+            onChange={(e) => setEffectiveness(e.target.value)}
+            min={0}
+            max={1}
+            step={0.01}
+            placeholder="—"
+            className={inputClass}
+          />
+        </div>
+      )}
+
+      {/* --- Indirect-Direct two-stage parameters --- */}
+      {processType === "indirect_direct_evaporative" && (
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-xs text-text-muted mb-1">IEC Eff. (0–1)</label>
+            <input
+              type="number"
+              value={iecEffectiveness}
+              onChange={(e) => setIecEffectiveness(e.target.value)}
+              min={0}
+              max={1}
+              step={0.01}
+              placeholder="—"
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-text-muted mb-1">DEC Eff. (0–1)</label>
+            <input
+              type="number"
+              value={decEffectiveness}
+              onChange={(e) => setDecEffectiveness(e.target.value)}
               min={0}
               max={1}
               step={0.01}
