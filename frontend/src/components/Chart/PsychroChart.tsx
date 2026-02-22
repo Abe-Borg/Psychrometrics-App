@@ -58,6 +58,14 @@ const PROCESS_LABELS: Record<string, string> = {
   sensible_reheat: "Sensible Reheat",
 };
 
+// Coil & SHR overlay colors
+const SHR_COLORS = {
+  room_shr: "#ff4757",
+  gshr: "#ff6b81",
+  eshr: "#ff7f50",
+  coil: "#00d2d3",
+};
+
 export default function PsychroChart() {
   const {
     chartData, chartLoading, chartError,
@@ -65,6 +73,9 @@ export default function PsychroChart() {
     setChartData, setChartLoading, setChartError,
     statePoints,
     processes,
+    coilResult,
+    shrLines,
+    gshrResult,
   } = useStore();
 
   // Hover tooltip state
@@ -320,8 +331,224 @@ export default function PsychroChart() {
       });
     });
 
+    // --- Coil analysis path ---
+    if (coilResult) {
+      const coilIsIP = coilResult.unit_system === "IP";
+      const cTUnit = coilIsIP ? "°F" : "°C";
+      const cWUnit = coilIsIP ? "gr/lb" : "g/kg";
+
+      // Coil process path line
+      t.push({
+        x: coilResult.path_points.map((p) => p.Tdb),
+        y: coilResult.path_points.map((p) => p.W_display),
+        mode: "lines",
+        type: "scatter",
+        line: { color: SHR_COLORS.coil, width: 2.5, dash: "solid" },
+        name: "Coil Path",
+        legendgroup: "coil",
+        showlegend: true,
+        hoverinfo: "skip",
+      });
+
+      // Entering marker
+      const ce = coilResult.entering;
+      t.push({
+        x: [ce.Tdb],
+        y: [ce.W_display],
+        mode: "markers",
+        type: "scatter",
+        marker: { color: SHR_COLORS.coil, size: 10, symbol: "circle", line: { color: "#fff", width: 1.5 } },
+        name: "Coil Entering",
+        legendgroup: "coil",
+        showlegend: false,
+        hovertemplate:
+          `<b>Coil Entering</b><br>Tdb: ${fmt(ce.Tdb, 1)}${cTUnit}<br>` +
+          `RH: ${fmt(ce.RH, 1)}%<br>W: ${fmt(ce.W_display, 1)} ${cWUnit}<extra></extra>`,
+      });
+
+      // Leaving marker
+      const cl = coilResult.leaving;
+      t.push({
+        x: [cl.Tdb],
+        y: [cl.W_display],
+        mode: "markers",
+        type: "scatter",
+        marker: { color: SHR_COLORS.coil, size: 10, symbol: "diamond", line: { color: "#fff", width: 1.5 } },
+        name: "Coil Leaving",
+        legendgroup: "coil",
+        showlegend: false,
+        hovertemplate:
+          `<b>Coil Leaving</b><br>Tdb: ${fmt(cl.Tdb, 1)}${cTUnit}<br>` +
+          `RH: ${fmt(cl.RH, 1)}%<br>W: ${fmt(cl.W_display, 1)} ${cWUnit}<extra></extra>`,
+      });
+
+      // ADP marker (star on saturation curve)
+      const ca = coilResult.adp;
+      t.push({
+        x: [ca.Tdb],
+        y: [ca.W_display],
+        mode: "markers",
+        type: "scatter",
+        marker: { color: SHR_COLORS.coil, size: 12, symbol: "star", line: { color: "#fff", width: 1 } },
+        name: "Coil ADP",
+        legendgroup: "coil",
+        showlegend: false,
+        hovertemplate:
+          `<b>Coil ADP</b><br>Tdb: ${fmt(ca.Tdb, 1)}${cTUnit}<br>` +
+          `RH: ${fmt(ca.RH, 1)}%<br>W: ${fmt(ca.W_display, 1)} ${cWUnit}<extra></extra>`,
+      });
+    }
+
+    // --- SHR lines ---
+    shrLines.forEach((shr, i) => {
+      const shrIsIP = shr.room_point.unit_system === "IP";
+      const sTUnit = shrIsIP ? "°F" : "°C";
+      const sWUnit = shrIsIP ? "gr/lb" : "g/kg";
+      const shrLabel = `SHR ${shr.shr.toFixed(2)}`;
+
+      // SHR line
+      t.push({
+        x: shr.line_points.map((p) => p.Tdb),
+        y: shr.line_points.map((p) => p.W_display),
+        mode: "lines",
+        type: "scatter",
+        line: { color: SHR_COLORS.room_shr, width: 2, dash: "dash" },
+        name: shrLabel,
+        legendgroup: `shr-${i}`,
+        showlegend: true,
+        hoverinfo: "skip",
+      });
+
+      // ADP marker
+      const sa = shr.adp;
+      t.push({
+        x: [sa.Tdb],
+        y: [sa.W_display],
+        mode: "markers",
+        type: "scatter",
+        marker: { color: SHR_COLORS.room_shr, size: 10, symbol: "star", line: { color: "#fff", width: 1 } },
+        name: `${shrLabel} ADP`,
+        legendgroup: `shr-${i}`,
+        showlegend: false,
+        hovertemplate:
+          `<b>${shrLabel} ADP</b><br>Tdb: ${fmt(sa.Tdb, 1)}${sTUnit}<br>` +
+          `RH: ${fmt(sa.RH, 1)}%<br>W: ${fmt(sa.W_display, 1)} ${sWUnit}<extra></extra>`,
+      });
+    });
+
+    // --- GSHR / ESHR lines ---
+    if (gshrResult) {
+      const gIsIP = gshrResult.room_point.unit_system === "IP";
+      const gTUnit = gIsIP ? "°F" : "°C";
+      const gWUnit = gIsIP ? "gr/lb" : "g/kg";
+
+      // Room SHR line
+      t.push({
+        x: gshrResult.room_shr_line.map((p) => p.Tdb),
+        y: gshrResult.room_shr_line.map((p) => p.W_display),
+        mode: "lines",
+        type: "scatter",
+        line: { color: SHR_COLORS.room_shr, width: 2, dash: "dash" },
+        name: `Room SHR ${gshrResult.room_shr.toFixed(2)}`,
+        legendgroup: "gshr-room",
+        showlegend: true,
+        hoverinfo: "skip",
+      });
+
+      // Room SHR ADP
+      const grAdp = gshrResult.room_shr_adp;
+      t.push({
+        x: [grAdp.Tdb],
+        y: [grAdp.W_display],
+        mode: "markers",
+        type: "scatter",
+        marker: { color: SHR_COLORS.room_shr, size: 10, symbol: "star", line: { color: "#fff", width: 1 } },
+        name: "Room SHR ADP",
+        legendgroup: "gshr-room",
+        showlegend: false,
+        hovertemplate:
+          `<b>Room SHR ADP</b><br>Tdb: ${fmt(grAdp.Tdb, 1)}${gTUnit}<br>` +
+          `W: ${fmt(grAdp.W_display, 1)} ${gWUnit}<extra></extra>`,
+      });
+
+      // GSHR line
+      t.push({
+        x: gshrResult.gshr_line.map((p) => p.Tdb),
+        y: gshrResult.gshr_line.map((p) => p.W_display),
+        mode: "lines",
+        type: "scatter",
+        line: { color: SHR_COLORS.gshr, width: 2, dash: "dashdot" },
+        name: `GSHR ${gshrResult.gshr.toFixed(2)}`,
+        legendgroup: "gshr-grand",
+        showlegend: true,
+        hoverinfo: "skip",
+      });
+
+      // GSHR ADP
+      const ggAdp = gshrResult.gshr_adp;
+      t.push({
+        x: [ggAdp.Tdb],
+        y: [ggAdp.W_display],
+        mode: "markers",
+        type: "scatter",
+        marker: { color: SHR_COLORS.gshr, size: 10, symbol: "star", line: { color: "#fff", width: 1 } },
+        name: "GSHR ADP",
+        legendgroup: "gshr-grand",
+        showlegend: false,
+        hovertemplate:
+          `<b>GSHR ADP</b><br>Tdb: ${fmt(ggAdp.Tdb, 1)}${gTUnit}<br>` +
+          `W: ${fmt(ggAdp.W_display, 1)} ${gWUnit}<extra></extra>`,
+      });
+
+      // Mixed point marker
+      const mp = gshrResult.mixed_point;
+      t.push({
+        x: [mp.Tdb],
+        y: [mp.W_display],
+        mode: "markers",
+        type: "scatter",
+        marker: { color: SHR_COLORS.gshr, size: 9, symbol: "triangle-up", line: { color: "#fff", width: 1 } },
+        name: "Mixed Air",
+        legendgroup: "gshr-grand",
+        showlegend: false,
+        hovertemplate:
+          `<b>Mixed Air</b><br>Tdb: ${fmt(mp.Tdb, 1)}${gTUnit}<br>` +
+          `RH: ${fmt(mp.RH, 1)}%<br>W: ${fmt(mp.W_display, 1)} ${gWUnit}<extra></extra>`,
+      });
+
+      // ESHR line (if present)
+      if (gshrResult.eshr_line && gshrResult.eshr != null && gshrResult.eshr_adp) {
+        t.push({
+          x: gshrResult.eshr_line.map((p) => p.Tdb),
+          y: gshrResult.eshr_line.map((p) => p.W_display),
+          mode: "lines",
+          type: "scatter",
+          line: { color: SHR_COLORS.eshr, width: 2, dash: "dot" },
+          name: `ESHR ${gshrResult.eshr.toFixed(2)}`,
+          legendgroup: "gshr-eff",
+          showlegend: true,
+          hoverinfo: "skip",
+        });
+
+        const geAdp = gshrResult.eshr_adp;
+        t.push({
+          x: [geAdp.Tdb],
+          y: [geAdp.W_display],
+          mode: "markers",
+          type: "scatter",
+          marker: { color: SHR_COLORS.eshr, size: 10, symbol: "star", line: { color: "#fff", width: 1 } },
+          name: "ESHR ADP",
+          legendgroup: "gshr-eff",
+          showlegend: false,
+          hovertemplate:
+            `<b>ESHR ADP</b><br>Tdb: ${fmt(geAdp.Tdb, 1)}${gTUnit}<br>` +
+            `W: ${fmt(geAdp.W_display, 1)} ${gWUnit}<extra></extra>`,
+        });
+      }
+    }
+
     return t;
-  }, [chartData, statePoints, processes]);
+  }, [chartData, statePoints, processes, coilResult, shrLines, gshrResult]);
 
   // Layout
   const layout = useMemo<Partial<Layout>>(() => {
@@ -377,7 +604,32 @@ export default function PsychroChart() {
       };
     });
 
-    const annotations = [...arrowAnnotations, ...numberAnnotations];
+    // Coil direction arrow
+    const coilAnnotations: typeof arrowAnnotations = [];
+    if (coilResult && coilResult.path_points.length > 2) {
+      const cpts = coilResult.path_points;
+      const cFromIdx = Math.floor(cpts.length * 0.4);
+      const cToIdx = Math.floor(cpts.length * 0.6);
+      coilAnnotations.push({
+        x: cpts[cToIdx].Tdb,
+        y: cpts[cToIdx].W_display,
+        ax: cpts[cFromIdx].Tdb,
+        ay: cpts[cFromIdx].W_display,
+        xref: "x" as const,
+        yref: "y" as const,
+        axref: "x" as const,
+        ayref: "y" as const,
+        showarrow: true,
+        arrowhead: 3,
+        arrowsize: 1.5,
+        arrowwidth: 2,
+        arrowcolor: SHR_COLORS.coil,
+        opacity: 0.8,
+        text: "",
+      });
+    }
+
+    const annotations = [...arrowAnnotations, ...numberAnnotations, ...coilAnnotations];
 
     return {
       autosize: true,
@@ -422,7 +674,7 @@ export default function PsychroChart() {
       dragmode: "pan",
       annotations,
     };
-  }, [chartData, unitSystem, processes]);
+  }, [chartData, unitSystem, processes, coilResult, gshrResult]);
 
   const config: Partial<Config> = {
     responsive: true,

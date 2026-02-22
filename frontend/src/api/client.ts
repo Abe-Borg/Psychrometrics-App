@@ -1,4 +1,4 @@
-import type { ChartData, StatePointInput, StatePointOutput, ProcessInput, ProcessOutput, UnitSystem } from "../types/psychro";
+import type { ChartData, StatePointInput, StatePointOutput, ProcessInput, ProcessOutput, CoilInput, CoilOutput, SHRLineInput, SHRLineOutput, GSHRInput, GSHROutput, UnitSystem } from "../types/psychro";
 
 const BASE_URL = "/api/v1";
 
@@ -38,6 +38,33 @@ export async function calculateProcess(
   input: ProcessInput
 ): Promise<ProcessOutput> {
   return fetchJSON<ProcessOutput>(`${BASE_URL}/process`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function analyzeCoil(
+  input: CoilInput
+): Promise<CoilOutput> {
+  return fetchJSON<CoilOutput>(`${BASE_URL}/coil`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function calculateSHRLine(
+  input: SHRLineInput
+): Promise<SHRLineOutput> {
+  return fetchJSON<SHRLineOutput>(`${BASE_URL}/shr/line`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function calculateGSHR(
+  input: GSHRInput
+): Promise<GSHROutput> {
+  return fetchJSON<GSHROutput>(`${BASE_URL}/shr/gshr`, {
     method: "POST",
     body: JSON.stringify(input),
   });

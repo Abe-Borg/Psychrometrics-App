@@ -108,6 +108,94 @@ export interface ProcessOutput {
   warnings: string[];
 }
 
+// --- Coil analysis types ---
+
+export type CoilMode = "forward" | "reverse";
+
+export interface CoilInput {
+  mode: CoilMode;
+  unit_system: UnitSystem;
+  pressure: number;
+  entering_pair: [string, string];
+  entering_values: [number, number];
+  adp_Tdb?: number;
+  bypass_factor?: number;
+  leaving_pair?: [string, string];
+  leaving_values?: [number, number];
+  airflow?: number;
+  water_entering_temp?: number;
+  water_leaving_temp?: number;
+}
+
+export interface CoilOutput {
+  unit_system: UnitSystem;
+  pressure: number;
+  mode: CoilMode;
+  entering: StatePointOutput;
+  leaving: StatePointOutput;
+  adp: StatePointOutput;
+  bypass_factor: number;
+  contact_factor: number;
+  Qs: number;
+  Ql: number;
+  Qt: number;
+  SHR: number;
+  load_unit: string;
+  gpm: number | null;
+  path_points: PathPoint[];
+  warnings: string[];
+}
+
+// --- SHR types ---
+
+export interface SHRLineInput {
+  unit_system: UnitSystem;
+  pressure: number;
+  room_pair: [string, string];
+  room_values: [number, number];
+  shr: number;
+}
+
+export interface SHRLineOutput {
+  room_point: StatePointOutput;
+  shr: number;
+  slope_dW_dTdb: number;
+  line_points: PathPoint[];
+  adp: StatePointOutput;
+  adp_Tdb: number;
+  warnings: string[];
+}
+
+export interface GSHRInput {
+  unit_system: UnitSystem;
+  pressure: number;
+  room_pair: [string, string];
+  room_values: [number, number];
+  oa_pair: [string, string];
+  oa_values: [number, number];
+  room_sensible_load: number;
+  room_total_load: number;
+  oa_fraction: number;
+  total_airflow: number;
+  bypass_factor?: number;
+}
+
+export interface GSHROutput {
+  room_point: StatePointOutput;
+  oa_point: StatePointOutput;
+  mixed_point: StatePointOutput;
+  room_shr: number;
+  gshr: number;
+  eshr: number | null;
+  room_shr_line: PathPoint[];
+  gshr_line: PathPoint[];
+  eshr_line: PathPoint[] | null;
+  room_shr_adp: StatePointOutput;
+  gshr_adp: StatePointOutput;
+  eshr_adp: StatePointOutput | null;
+  warnings: string[];
+}
+
 // --- Chart types ---
 
 export interface ChartPoint {

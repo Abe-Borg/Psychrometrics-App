@@ -11,108 +11,21 @@ Two modes:
   - REVERSE: Given entering state + leaving state → back-calculate ADP and BF
 """
 
-import psychrolib
-from scipy.optimize import brentq
-
-from app.config import UnitSystem, GRAINS_PER_LB, CHART_RANGES
+from app.config import UnitSystem
 from app.engine.state_resolver import resolve_state_point
 from app.engine.processes.base import ProcessSolver
+from app.engine.processes.utils import (
+    set_unit_system,
+    w_display,
+    find_adp,
+    generate_path_points,
+)
 from app.models.process import (
     ProcessInput,
     ProcessOutput,
     ProcessType,
     CoolingDehumMode,
-    PathPoint,
 )
-
-
-def _set_unit_system(unit_system: UnitSystem) -> None:
-    if unit_system == UnitSystem.IP:
-        psychrolib.SetUnitSystem(psychrolib.IP)
-    else:
-        psychrolib.SetUnitSystem(psychrolib.SI)
-
-
-def _w_display(W: float, unit_system: UnitSystem) -> float:
-    """Convert humidity ratio to display units."""
-    if unit_system == UnitSystem.IP:
-        return round(W * GRAINS_PER_LB, 4)
-    else:
-        return round(W * 1000.0, 4)
-
-
-def _find_adp(
-    entering_Tdb: float,
-    entering_W: float,
-    leaving_Tdb: float,
-    leaving_W: float,
-    pressure: float,
-    unit_system: UnitSystem,
-) -> float:
-    """
-    Find the apparatus dew point (ADP) — the intersection of the process line
-    with the saturation curve.
-
-    The process line in Tdb-W space is:
-        W = entering_W + slope × (Tdb - entering_Tdb)
-
-    The ADP is where W_sat(Tdb) == W_line(Tdb).
-
-    Returns the ADP dry-bulb temperature.
-    """
-    _set_unit_system(unit_system)
-
-    if abs(leaving_Tdb - entering_Tdb) < 1e-10:
-        raise ValueError(
-            "Entering and leaving Tdb are identical — cannot determine process line."
-        )
-
-    slope = (leaving_W - entering_W) / (leaving_Tdb - entering_Tdb)
-
-    def objective(Tdb: float) -> float:
-        W_on_line = entering_W + slope * (Tdb - entering_Tdb)
-        W_sat = psychrolib.GetSatHumRatio(Tdb, pressure)
-        return W_sat - W_on_line
-
-    # Search domain: from chart minimum up to the leaving Tdb
-    ranges = CHART_RANGES[unit_system.value]
-    Tdb_min = ranges["Tdb_min"]
-    Tdb_max = leaving_Tdb
-
-    # Verify that the objective changes sign in the search interval
-    f_min = objective(Tdb_min)
-    f_max = objective(Tdb_max)
-
-    if f_min * f_max > 0:
-        raise ValueError(
-            "Process line does not intersect the saturation curve. "
-            "Check entering and leaving conditions."
-        )
-
-    adp_Tdb = brentq(objective, Tdb_min, Tdb_max, xtol=1e-8)
-    return adp_Tdb
-
-
-def _generate_path_points(
-    start_Tdb: float,
-    start_W: float,
-    end_Tdb: float,
-    end_W: float,
-    unit_system: UnitSystem,
-    n_points: int = 12,
-) -> list[PathPoint]:
-    """Generate intermediate points along the straight process line."""
-    points = []
-    for i in range(n_points + 1):
-        t = i / n_points
-        Tdb = start_Tdb + t * (end_Tdb - start_Tdb)
-        W = start_W + t * (end_W - start_W)
-        points.append(PathPoint(
-            Tdb=round(Tdb, 4),
-            W=round(W, 7),
-            W_display=_w_display(W, unit_system),
-        ))
-    return points
 
 
 class CoolingDehumSolver(ProcessSolver):
@@ -157,7 +70,7 @@ class CoolingDehumSolver(ProcessSolver):
             raise ValueError("bypass_factor must be between 0 and 1 (exclusive)")
 
         # Resolve ADP as a saturated state (100% RH)
-        _set_unit_system(pi.unit_system)
+        set_unit_system(pi.unit_system)
         adp = resolve_state_point(
             input_pair=("Tdb", "RH"),
             values=(pi.adp_Tdb, 100.0),
@@ -201,14 +114,14 @@ class CoolingDehumSolver(ProcessSolver):
         Ql = Qt - Qs_precise
         SHR = Qs_precise / Qt if abs(Qt) > 1e-10 else 1.0
 
-        path_points = _generate_path_points(
+        path_points = generate_path_points(
             start.Tdb, start.W, end.Tdb, end.W, pi.unit_system
         )
 
         metadata = {
             "ADP_Tdb": round(adp.Tdb, 4),
             "ADP_W": round(adp.W, 7),
-            "ADP_W_display": _w_display(adp.W, pi.unit_system),
+            "ADP_W_display": w_display(adp.W, pi.unit_system),
             "BF": round(BF, 4),
             "CF": round(CF, 4),
             "Qs": round(Qs_precise, 4),
@@ -256,8 +169,8 @@ class CoolingDehumSolver(ProcessSolver):
             )
 
         # Find the ADP
-        _set_unit_system(pi.unit_system)
-        adp_Tdb = _find_adp(
+        set_unit_system(pi.unit_system)
+        adp_Tdb = find_adp(
             start.Tdb, start.W, end.Tdb, end.W,
             pi.pressure, pi.unit_system,
         )
@@ -296,14 +209,14 @@ class CoolingDehumSolver(ProcessSolver):
         Ql = Qt - Qs_precise
         SHR = Qs_precise / Qt if abs(Qt) > 1e-10 else 1.0
 
-        path_points = _generate_path_points(
+        path_points = generate_path_points(
             start.Tdb, start.W, end.Tdb, end.W, pi.unit_system
         )
 
         metadata = {
             "ADP_Tdb": round(adp.Tdb, 4),
             "ADP_W": round(adp.W, 7),
-            "ADP_W_display": _w_display(adp.W, pi.unit_system),
+            "ADP_W_display": w_display(adp.W, pi.unit_system),
             "BF": round(BF, 4),
             "CF": round(CF, 4),
             "Qs": round(Qs_precise, 4),
