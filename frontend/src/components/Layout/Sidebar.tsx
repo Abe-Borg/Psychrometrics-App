@@ -5,6 +5,9 @@ import ProcessList from "../Process/ProcessList";
 import CoilAnalysis from "../Coil/CoilAnalysis";
 import SHRPanel from "../SHR/SHRPanel";
 import AirflowCalc from "../Airflow/AirflowCalc";
+import DesignDayPanel from "../DesignDay/DesignDayPanel";
+import TMYPanel from "../TMY/TMYPanel";
+import AHUWizard from "../AHUWizard/AHUWizard";
 
 export default function Sidebar() {
   return (
@@ -76,6 +79,36 @@ export default function Sidebar() {
             Airflow Calculator
           </h2>
           <AirflowCalc />
+        </section>
+
+        <div className="h-px bg-border" />
+
+        {/* AHU Wizard */}
+        <section>
+          <h2 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-3">
+            AHU Wizard
+          </h2>
+          <AHUWizard />
+        </section>
+
+        <div className="h-px bg-border" />
+
+        {/* ASHRAE Design Day */}
+        <section>
+          <h2 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-3">
+            ASHRAE Design Days
+          </h2>
+          <DesignDayPanel />
+        </section>
+
+        <div className="h-px bg-border" />
+
+        {/* TMY Weather Data */}
+        <section>
+          <h2 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-3">
+            TMY Weather Data
+          </h2>
+          <TMYPanel />
         </section>
       </div>
     </div>
