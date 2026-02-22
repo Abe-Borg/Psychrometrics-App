@@ -241,6 +241,110 @@ export interface CondensationCheckOutput {
   unit_system: UnitSystem;
 }
 
+// --- Design Day types ---
+
+export interface DesignDaySearchResult {
+  name: string;
+  state: string;
+  country: string;
+  climate_zone: string;
+  elevation_ft: number;
+}
+
+export interface DesignDayResolvedPoint {
+  condition_label: string;
+  category: string;
+  Tdb: number;
+  Twb: number;
+  Tdp: number;
+  RH: number;
+  W: number;
+  W_display: number;
+  h: number;
+  v: number;
+  unit_system: string;
+}
+
+export interface DesignDayResolveInput {
+  location_name: string;
+  location_state: string;
+  condition_labels: string[];
+  unit_system: UnitSystem;
+  pressure?: number;
+}
+
+export interface DesignDayResolveOutput {
+  location: DesignDaySearchResult;
+  points: DesignDayResolvedPoint[];
+  pressure_used: number;
+  unit_system: string;
+}
+
+// --- TMY types ---
+
+export interface TMYScatterPoint {
+  Tdb: number;
+  W_display: number;
+  hour: number;
+  month: number;
+}
+
+export interface TMYProcessOutput {
+  unit_system: UnitSystem;
+  scatter_points: TMYScatterPoint[];
+  bin_Tdb_edges: number[];
+  bin_W_edges: number[];
+  bin_matrix: number[][];
+  location_name: string | null;
+  total_hours: number;
+}
+
+// --- AHU Wizard types ---
+
+export type AHUType = "mixed_air" | "full_oa" | "economizer";
+
+export interface AHUWizardInput {
+  ahu_type: AHUType;
+  unit_system: UnitSystem;
+  pressure: number;
+  oa_Tdb: number;
+  oa_coincident: number;
+  oa_input_type: string;
+  ra_Tdb?: number;
+  ra_RH?: number;
+  oa_fraction?: number;
+  oa_cfm?: number;
+  ra_cfm?: number;
+  supply_Tdb: number;
+  supply_RH?: number;
+  room_sensible_load?: number;
+  room_total_load?: number;
+  total_airflow?: number;
+}
+
+export interface AHUWizardOutput {
+  ahu_type: AHUType;
+  unit_system: UnitSystem;
+  oa_point: StatePointOutput;
+  ra_point: StatePointOutput | null;
+  mixed_point: StatePointOutput | null;
+  coil_leaving: StatePointOutput;
+  supply_point: StatePointOutput;
+  processes: ProcessOutput[];
+  cooling_Qs: number;
+  cooling_Ql: number;
+  cooling_Qt: number;
+  reheat_Q: number | null;
+  shr: number;
+  supply_cfm: number | null;
+  adp_Tdb: number | null;
+  bypass_factor: number | null;
+  pressure: number;
+  oa_fraction_used: number;
+  needs_reheat: boolean;
+  warnings: string[];
+}
+
 // --- Chart types ---
 
 export interface ChartPoint {

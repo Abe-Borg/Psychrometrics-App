@@ -10,6 +10,10 @@ from app.api.process import router as process_router
 from app.api.coil import router as coil_router
 from app.api.shr import router as shr_router
 from app.api.airflow import router as airflow_router
+from app.api.design_day import router as design_day_router
+from app.api.tmy import router as tmy_router
+from app.api.ahu_wizard import router as ahu_wizard_router
+from app.api.report import router as report_router
 
 router = APIRouter()
 router.include_router(state_point_router)
@@ -18,3 +22,7 @@ router.include_router(process_router)
 router.include_router(coil_router)
 router.include_router(shr_router)
 router.include_router(airflow_router)
+router.include_router(design_day_router)
+router.include_router(tmy_router)
+router.include_router(ahu_wizard_router)
+router.include_router(report_router)

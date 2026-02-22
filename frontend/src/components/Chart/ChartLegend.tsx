@@ -11,6 +11,8 @@ const LEGEND_ITEMS: { key: keyof ChartVisibility; label: string; color: string }
   { key: "processes", label: "Processes", color: "#ff9f43" },
   { key: "coil", label: "Coil Path", color: "#00d2d3" },
   { key: "shrLines", label: "SHR Lines", color: "#ff4757" },
+  { key: "designDays", label: "Design Days", color: "#ffa502" },
+  { key: "tmyData", label: "TMY Data", color: "#ff6348" },
 ];
 
 export default function ChartLegend() {

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { UnitSystem, ChartData, StatePointOutput, ProcessOutput, CoilOutput, SHRLineOutput, GSHROutput, AirflowCalcOutput, CondensationCheckOutput } from "../types/psychro";
+import type { UnitSystem, ChartData, StatePointOutput, ProcessOutput, CoilOutput, SHRLineOutput, GSHROutput, AirflowCalcOutput, CondensationCheckOutput, DesignDayResolveOutput, TMYProcessOutput, AHUWizardOutput } from "../types/psychro";
 import type { ProjectFile } from "../types/project";
 
 // Snapshot of undoable state
@@ -28,6 +28,8 @@ export interface ChartVisibility {
   processes: boolean;
   coil: boolean;
   shrLines: boolean;
+  designDays: boolean;
+  tmyData: boolean;
 }
 
 const MAX_HISTORY = 50;
@@ -104,6 +106,36 @@ interface AppState {
   clearAirflowResult: () => void;
   setCondensationResult: (result: CondensationCheckOutput | null) => void;
   clearCondensationResult: () => void;
+
+  // --- Phase 7: Design Day overlay ---
+  designDayResult: DesignDayResolveOutput | null;
+  designDayLoading: boolean;
+
+  // Actions — design day
+  setDesignDayResult: (result: DesignDayResolveOutput | null) => void;
+  clearDesignDayResult: () => void;
+  setDesignDayLoading: (loading: boolean) => void;
+
+  // --- Phase 7: TMY data overlay ---
+  tmyResult: TMYProcessOutput | null;
+  tmyDisplayMode: "scatter" | "heatmap";
+  tmyLoading: boolean;
+
+  // Actions — TMY
+  setTMYResult: (result: TMYProcessOutput | null) => void;
+  clearTMYResult: () => void;
+  setTMYDisplayMode: (mode: "scatter" | "heatmap") => void;
+  setTMYLoading: (loading: boolean) => void;
+
+  // --- Phase 7: AHU Wizard ---
+  ahuWizardResult: AHUWizardOutput | null;
+  ahuWizardLoading: boolean;
+
+  // Actions — AHU Wizard
+  setAHUWizardResult: (result: AHUWizardOutput | null) => void;
+  clearAHUWizardResult: () => void;
+  setAHUWizardLoading: (loading: boolean) => void;
+  applyAHUWizardToChart: () => void;
 
   // --- Phase 6: Project save/load ---
   projectTitle: string;
@@ -335,6 +367,60 @@ export const useStore = create<AppState>((set, get) => ({
   setCondensationResult: (result) => set({ condensationResult: result }),
   clearCondensationResult: () => set({ condensationResult: null }),
 
+  // --- Phase 7: Design Day overlay ---
+  designDayResult: null,
+  designDayLoading: false,
+
+  setDesignDayResult: (result) => set({ designDayResult: result }),
+  clearDesignDayResult: () => set({ designDayResult: null }),
+  setDesignDayLoading: (loading) => set({ designDayLoading: loading }),
+
+  // --- Phase 7: TMY data overlay ---
+  tmyResult: null,
+  tmyDisplayMode: "scatter",
+  tmyLoading: false,
+
+  setTMYResult: (result) => set({ tmyResult: result }),
+  clearTMYResult: () => set({ tmyResult: null }),
+  setTMYDisplayMode: (mode) => set({ tmyDisplayMode: mode }),
+  setTMYLoading: (loading) => set({ tmyLoading: loading }),
+
+  // --- Phase 7: AHU Wizard ---
+  ahuWizardResult: null,
+  ahuWizardLoading: false,
+
+  setAHUWizardResult: (result) => set({ ahuWizardResult: result }),
+  clearAHUWizardResult: () => set({ ahuWizardResult: null }),
+  setAHUWizardLoading: (loading) => set({ ahuWizardLoading: loading }),
+
+  applyAHUWizardToChart: () => {
+    const state = get();
+    const result = state.ahuWizardResult;
+    if (!result) return;
+
+    const snapshot = takeSnapshot(state);
+
+    // Collect all state points from the wizard result
+    const newPoints: StatePointOutput[] = [];
+    if (result.oa_point) newPoints.push(result.oa_point as StatePointOutput);
+    if (result.ra_point) newPoints.push(result.ra_point as StatePointOutput);
+    if (result.mixed_point) newPoints.push(result.mixed_point as StatePointOutput);
+    if (result.coil_leaving) newPoints.push(result.coil_leaving as StatePointOutput);
+    if (result.supply_point && result.needs_reheat) {
+      newPoints.push(result.supply_point as StatePointOutput);
+    }
+
+    // Collect processes
+    const newProcesses = result.processes as ProcessOutput[];
+
+    set({
+      statePoints: [...state.statePoints, ...newPoints],
+      processes: [...state.processes, ...newProcesses],
+      _history: [...state._history, snapshot].slice(-MAX_HISTORY),
+      _future: [],
+    });
+  },
+
   // --- Phase 6: Project save/load ---
   projectTitle: "Untitled Project",
   setProjectTitle: (title) => set({ projectTitle: title }),
@@ -387,6 +473,9 @@ export const useStore = create<AppState>((set, get) => ({
       gshrResult: null,
       airflowResult: null,
       condensationResult: null,
+      designDayResult: null,
+      tmyResult: null,
+      ahuWizardResult: null,
       selectedPointIndex: null,
       _history: [...state._history, snapshot].slice(-MAX_HISTORY),
       _future: [],
@@ -459,6 +548,8 @@ export const useStore = create<AppState>((set, get) => ({
     processes: true,
     coil: true,
     shrLines: true,
+    designDays: true,
+    tmyData: true,
   },
   toggleVisibility: (key) =>
     set((state) => ({

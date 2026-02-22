@@ -96,6 +96,9 @@ export default function PsychroChart() {
     coilResult,
     shrLines,
     gshrResult,
+    designDayResult,
+    tmyResult,
+    tmyDisplayMode,
     setChartRef,
     setPendingClickPoint,
     selectedPointIndex,
@@ -300,6 +303,62 @@ export default function PsychroChart() {
       showlegend: false,
       hoverinfo: "none",
     });
+
+    // --- TMY data overlay (drawn behind state points) ---
+    if (visibility.tmyData && tmyResult && tmyResult.scatter_points.length > 0) {
+      if (tmyDisplayMode === "scatter") {
+        t.push({
+          x: tmyResult.scatter_points.map(p => p.Tdb),
+          y: tmyResult.scatter_points.map(p => p.W_display),
+          mode: "markers",
+          type: "scatter",
+          marker: {
+            color: tmyResult.scatter_points.map(p => p.month),
+            colorscale: "Portland",
+            cmin: 1,
+            cmax: 12,
+            size: 3,
+            opacity: 0.15,
+          },
+          name: `TMY: ${tmyResult.location_name ?? "Data"}`,
+          legendgroup: "tmy",
+          showlegend: true,
+          hoverinfo: "skip",
+        });
+      } else {
+        // Heatmap mode — use bin_matrix
+        const matrix = tmyResult.bin_matrix;
+        const tdbEdges = tmyResult.bin_Tdb_edges;
+        const wEdges = tmyResult.bin_W_edges;
+
+        // Compute bin centers
+        const tdbCenters = tdbEdges.slice(0, -1).map((e, i) => (e + tdbEdges[i + 1]) / 2);
+        const wCenters = wEdges.slice(0, -1).map((e, i) => (e + wEdges[i + 1]) / 2);
+
+        // Replace 0 with null for transparent bins
+        const zData = matrix.map(row => row.map(v => v === 0 ? null : v));
+
+        t.push({
+          x: tdbCenters,
+          y: wCenters,
+          z: zData,
+          type: "heatmap",
+          colorscale: "YlOrRd",
+          showscale: true,
+          opacity: 0.6,
+          name: `TMY: ${tmyResult.location_name ?? "Heatmap"}`,
+          legendgroup: "tmy",
+          showlegend: true,
+          hovertemplate: "Tdb: %{x:.1f}<br>W: %{y:.1f}<br>Hours: %{z}<extra></extra>",
+          colorbar: {
+            title: { text: "Hours", side: "right" },
+            thickness: 12,
+            len: 0.4,
+            y: 0.3,
+          },
+        } as unknown as Data);
+      }
+    }
 
     // --- State points ---
     if (visibility.statePoints) {
@@ -617,8 +676,72 @@ export default function PsychroChart() {
       }
     }
 
+    // --- Design day overlay ---
+    if (visibility.designDays && designDayResult && designDayResult.points.length > 0) {
+      const ddIsIP = designDayResult.unit_system === "IP";
+      const ddTUnit = ddIsIP ? "\u00B0F" : "\u00B0C";
+      const ddWUnit = ddIsIP ? "gr/lb" : "g/kg";
+
+      // Separate cooling and heating points for different colors
+      const coolingPts = designDayResult.points.filter(p => p.category.startsWith("cooling"));
+      const heatingPts = designDayResult.points.filter(p => p.category === "heating");
+
+      if (coolingPts.length > 0) {
+        t.push({
+          x: coolingPts.map(p => p.Tdb),
+          y: coolingPts.map(p => p.W_display),
+          mode: "markers",
+          type: "scatter",
+          marker: {
+            color: "#ffa502",
+            size: 12,
+            symbol: "triangle-up",
+            line: { color: "#fff", width: 1.5 },
+          },
+          name: `Design Day: ${designDayResult.location.name} (Cooling)`,
+          legendgroup: "design-day",
+          showlegend: true,
+          text: coolingPts.map(p => p.condition_label),
+          hovertemplate: coolingPts.map(p =>
+            `<b>${designDayResult.location.name} - ${p.condition_label}</b><br>` +
+            `Tdb: ${fmt(p.Tdb, 1)}${ddTUnit}<br>` +
+            `RH: ${fmt(p.RH, 1)}%<br>` +
+            `W: ${fmt(p.W_display, 1)} ${ddWUnit}<br>` +
+            `Twb: ${fmt(p.Twb, 1)}${ddTUnit}` +
+            `<extra></extra>`
+          ),
+        });
+      }
+
+      if (heatingPts.length > 0) {
+        t.push({
+          x: heatingPts.map(p => p.Tdb),
+          y: heatingPts.map(p => p.W_display),
+          mode: "markers",
+          type: "scatter",
+          marker: {
+            color: "#70a1ff",
+            size: 12,
+            symbol: "triangle-down",
+            line: { color: "#fff", width: 1.5 },
+          },
+          name: `Design Day: ${designDayResult.location.name} (Heating)`,
+          legendgroup: "design-day",
+          showlegend: true,
+          text: heatingPts.map(p => p.condition_label),
+          hovertemplate: heatingPts.map(p =>
+            `<b>${designDayResult.location.name} - ${p.condition_label}</b><br>` +
+            `Tdb: ${fmt(p.Tdb, 1)}${ddTUnit}<br>` +
+            `RH: ${fmt(p.RH, 1)}%<br>` +
+            `W: ${fmt(p.W_display, 1)} ${ddWUnit}` +
+            `<extra></extra>`
+          ),
+        });
+      }
+    }
+
     return t;
-  }, [chartData, statePoints, processes, coilResult, shrLines, gshrResult, selectedPointIndex, theme, visibility]);
+  }, [chartData, statePoints, processes, coilResult, shrLines, gshrResult, designDayResult, tmyResult, tmyDisplayMode, selectedPointIndex, theme, visibility]);
 
   // Layout
   const layout = useMemo<Partial<Layout>>(() => {

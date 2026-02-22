@@ -2,7 +2,9 @@ import { useState, useRef } from "react";
 import { useStore } from "../../store/useStore";
 import { getPressureFromAltitude } from "../../api/client";
 import { downloadJSON, downloadCSV, downloadChartImage } from "../../utils/exportHelpers";
+import { generateReport } from "../../api/client";
 import type { ProjectFile } from "../../types/project";
+import Plotly from "plotly.js";
 
 export default function Toolbar() {
   const {
@@ -10,6 +12,7 @@ export default function Toolbar() {
     setUnitSystem, setPressure, setAltitude, clearProcesses,
     projectTitle, setProjectTitle, exportProject, importProject,
     chartRef, statePoints, processes,
+    coilResult, shrLines, gshrResult,
     undo, redo, canUndo, canRedo,
     theme, toggleTheme,
     addToast,
@@ -161,6 +164,54 @@ export default function Toolbar() {
     addToast("Data exported as CSV", "success");
   }
 
+  async function handleExportPDF() {
+    setShowExportMenu(false);
+    if (!chartRef) {
+      addToast("Chart not ready for PDF export", "error");
+      return;
+    }
+    try {
+      addToast("Generating PDF report...", "success");
+      // Capture chart as base64 PNG
+      const imgData = await Plotly.toImage(chartRef as Plotly.PlotlyHTMLElement, {
+        format: "png",
+        width: 1600,
+        height: 900,
+      });
+      const payload = {
+        title: projectTitle,
+        unit_system: unitSystem,
+        pressure,
+        altitude,
+        chart_image_base64: imgData,
+        state_points: statePoints,
+        processes,
+        coil_result: coilResult,
+        shr_lines: shrLines,
+        gshr_result: gshrResult,
+        include_sections: [
+          "chart",
+          ...(statePoints.length > 0 ? ["state_points"] : []),
+          ...(processes.length > 0 ? ["processes"] : []),
+          ...(coilResult ? ["coil"] : []),
+          ...(shrLines.length > 0 || gshrResult ? ["shr"] : []),
+        ],
+      };
+      const blob = await generateReport(payload);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${projectTitle.replace(/[^a-zA-Z0-9_-]/g, "_")}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      addToast("PDF report downloaded", "success");
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : "Failed to generate PDF", "error");
+    }
+  }
+
   return (
     <div className="toolbar-bar flex items-center gap-3 px-4 py-2 bg-bg-secondary border-b border-border text-sm">
       {/* Project title */}
@@ -221,6 +272,10 @@ export default function Toolbar() {
             </button>
             <button onClick={handleExportCSV} className="export-menu-item">
               Data as CSV
+            </button>
+            <div className="h-px bg-border" />
+            <button onClick={handleExportPDF} className="export-menu-item">
+              PDF Report
             </button>
           </div>
         )}

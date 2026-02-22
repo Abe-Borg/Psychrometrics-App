@@ -1,0 +1,933 @@
+[
+  {
+    "name": "Phoenix",
+    "state": "AZ",
+    "country": "USA",
+    "lat": 33.45,
+    "lon": -111.98,
+    "elevation_ft": 1117,
+    "climate_zone": "2B",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 110.2, "Twb_coincident": 71.1},
+      "cooling_db_010": {"Tdb": 108.0, "Twb_coincident": 70.6},
+      "cooling_db_020": {"Tdb": 106.1, "Twb_coincident": 70.1},
+      "cooling_wb_004": {"Twb": 75.7, "Tdb_coincident": 99.5},
+      "cooling_wb_010": {"Twb": 75.0, "Tdb_coincident": 99.0},
+      "cooling_wb_020": {"Twb": 74.2, "Tdb_coincident": 98.3},
+      "heating_996": {"Tdb": 38.3},
+      "heating_990": {"Tdb": 41.7}
+    }
+  },
+  {
+    "name": "Tucson",
+    "state": "AZ",
+    "country": "USA",
+    "lat": 32.12,
+    "lon": -110.93,
+    "elevation_ft": 2556,
+    "climate_zone": "2B",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 106.5, "Twb_coincident": 66.0},
+      "cooling_db_010": {"Tdb": 104.6, "Twb_coincident": 65.8},
+      "cooling_db_020": {"Tdb": 103.0, "Twb_coincident": 65.5},
+      "cooling_wb_004": {"Twb": 72.1, "Tdb_coincident": 93.0},
+      "cooling_wb_010": {"Twb": 71.2, "Tdb_coincident": 92.5},
+      "cooling_wb_020": {"Twb": 70.4, "Tdb_coincident": 91.8},
+      "heating_996": {"Tdb": 32.2},
+      "heating_990": {"Tdb": 35.1}
+    }
+  },
+  {
+    "name": "Los Angeles",
+    "state": "CA",
+    "country": "USA",
+    "lat": 33.94,
+    "lon": -118.41,
+    "elevation_ft": 325,
+    "climate_zone": "3B",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 90.5, "Twb_coincident": 64.8},
+      "cooling_db_010": {"Tdb": 87.1, "Twb_coincident": 64.3},
+      "cooling_db_020": {"Tdb": 84.2, "Twb_coincident": 63.9},
+      "cooling_wb_004": {"Twb": 69.2, "Tdb_coincident": 82.1},
+      "cooling_wb_010": {"Twb": 68.1, "Tdb_coincident": 80.5},
+      "cooling_wb_020": {"Twb": 67.2, "Tdb_coincident": 79.3},
+      "heating_996": {"Tdb": 43.5},
+      "heating_990": {"Tdb": 45.5}
+    }
+  },
+  {
+    "name": "San Francisco",
+    "state": "CA",
+    "country": "USA",
+    "lat": 37.62,
+    "lon": -122.40,
+    "elevation_ft": 16,
+    "climate_zone": "3C",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 84.0, "Twb_coincident": 63.1},
+      "cooling_db_010": {"Tdb": 79.4, "Twb_coincident": 62.0},
+      "cooling_db_020": {"Tdb": 74.8, "Twb_coincident": 61.3},
+      "cooling_wb_004": {"Twb": 64.0, "Tdb_coincident": 78.0},
+      "cooling_wb_010": {"Twb": 63.0, "Tdb_coincident": 74.5},
+      "cooling_wb_020": {"Twb": 62.1, "Tdb_coincident": 72.0},
+      "heating_996": {"Tdb": 38.1},
+      "heating_990": {"Tdb": 40.0}
+    }
+  },
+  {
+    "name": "Sacramento",
+    "state": "CA",
+    "country": "USA",
+    "lat": 38.51,
+    "lon": -121.50,
+    "elevation_ft": 16,
+    "climate_zone": "3B",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 104.4, "Twb_coincident": 70.2},
+      "cooling_db_010": {"Tdb": 101.7, "Twb_coincident": 69.2},
+      "cooling_db_020": {"Tdb": 99.2, "Twb_coincident": 68.2},
+      "cooling_wb_004": {"Twb": 72.0, "Tdb_coincident": 98.3},
+      "cooling_wb_010": {"Twb": 70.6, "Tdb_coincident": 96.8},
+      "cooling_wb_020": {"Twb": 69.4, "Tdb_coincident": 95.2},
+      "heating_996": {"Tdb": 32.6},
+      "heating_990": {"Tdb": 35.3}
+    }
+  },
+  {
+    "name": "San Diego",
+    "state": "CA",
+    "country": "USA",
+    "lat": 32.73,
+    "lon": -117.18,
+    "elevation_ft": 30,
+    "climate_zone": "3B",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 88.2, "Twb_coincident": 67.8},
+      "cooling_db_010": {"Tdb": 84.6, "Twb_coincident": 67.0},
+      "cooling_db_020": {"Tdb": 81.7, "Twb_coincident": 66.5},
+      "cooling_wb_004": {"Twb": 70.6, "Tdb_coincident": 81.5},
+      "cooling_wb_010": {"Twb": 69.4, "Tdb_coincident": 79.8},
+      "cooling_wb_020": {"Twb": 68.5, "Tdb_coincident": 78.5},
+      "heating_996": {"Tdb": 44.0},
+      "heating_990": {"Tdb": 46.1}
+    }
+  },
+  {
+    "name": "Denver",
+    "state": "CO",
+    "country": "USA",
+    "lat": 39.75,
+    "lon": -104.87,
+    "elevation_ft": 5331,
+    "climate_zone": "5B",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 96.0, "Twb_coincident": 60.0},
+      "cooling_db_010": {"Tdb": 93.5, "Twb_coincident": 59.4},
+      "cooling_db_020": {"Tdb": 91.2, "Twb_coincident": 59.0},
+      "cooling_wb_004": {"Twb": 63.3, "Tdb_coincident": 87.5},
+      "cooling_wb_010": {"Twb": 62.2, "Tdb_coincident": 86.0},
+      "cooling_wb_020": {"Twb": 61.1, "Tdb_coincident": 84.8},
+      "heating_996": {"Tdb": -1.0},
+      "heating_990": {"Tdb": 3.7}
+    }
+  },
+  {
+    "name": "Miami",
+    "state": "FL",
+    "country": "USA",
+    "lat": 25.79,
+    "lon": -80.32,
+    "elevation_ft": 13,
+    "climate_zone": "1A",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 93.0, "Twb_coincident": 78.2},
+      "cooling_db_010": {"Tdb": 92.0, "Twb_coincident": 77.8},
+      "cooling_db_020": {"Tdb": 91.1, "Twb_coincident": 77.5},
+      "cooling_wb_004": {"Twb": 79.7, "Tdb_coincident": 89.2},
+      "cooling_wb_010": {"Twb": 79.1, "Tdb_coincident": 88.7},
+      "cooling_wb_020": {"Twb": 78.6, "Tdb_coincident": 88.3},
+      "heating_996": {"Tdb": 47.7},
+      "heating_990": {"Tdb": 51.1}
+    }
+  },
+  {
+    "name": "Orlando",
+    "state": "FL",
+    "country": "USA",
+    "lat": 28.43,
+    "lon": -81.31,
+    "elevation_ft": 96,
+    "climate_zone": "2A",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 95.4, "Twb_coincident": 77.3},
+      "cooling_db_010": {"Tdb": 94.0, "Twb_coincident": 77.0},
+      "cooling_db_020": {"Tdb": 92.8, "Twb_coincident": 76.7},
+      "cooling_wb_004": {"Twb": 78.6, "Tdb_coincident": 90.1},
+      "cooling_wb_010": {"Twb": 78.0, "Tdb_coincident": 89.5},
+      "cooling_wb_020": {"Twb": 77.5, "Tdb_coincident": 89.0},
+      "heating_996": {"Tdb": 37.0},
+      "heating_990": {"Tdb": 41.0}
+    }
+  },
+  {
+    "name": "Tampa",
+    "state": "FL",
+    "country": "USA",
+    "lat": 27.96,
+    "lon": -82.54,
+    "elevation_ft": 26,
+    "climate_zone": "2A",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 93.5, "Twb_coincident": 78.0},
+      "cooling_db_010": {"Tdb": 92.5, "Twb_coincident": 77.6},
+      "cooling_db_020": {"Tdb": 91.7, "Twb_coincident": 77.3},
+      "cooling_wb_004": {"Twb": 79.2, "Tdb_coincident": 89.8},
+      "cooling_wb_010": {"Twb": 78.7, "Tdb_coincident": 89.3},
+      "cooling_wb_020": {"Twb": 78.2, "Tdb_coincident": 88.8},
+      "heating_996": {"Tdb": 39.9},
+      "heating_990": {"Tdb": 43.4}
+    }
+  },
+  {
+    "name": "Atlanta",
+    "state": "GA",
+    "country": "USA",
+    "lat": 33.63,
+    "lon": -84.44,
+    "elevation_ft": 1027,
+    "climate_zone": "3A",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 95.5, "Twb_coincident": 74.9},
+      "cooling_db_010": {"Tdb": 93.5, "Twb_coincident": 74.5},
+      "cooling_db_020": {"Tdb": 91.7, "Twb_coincident": 74.1},
+      "cooling_wb_004": {"Twb": 77.0, "Tdb_coincident": 89.5},
+      "cooling_wb_010": {"Twb": 76.2, "Tdb_coincident": 88.5},
+      "cooling_wb_020": {"Twb": 75.5, "Tdb_coincident": 87.7},
+      "heating_996": {"Tdb": 21.5},
+      "heating_990": {"Tdb": 25.5}
+    }
+  },
+  {
+    "name": "Honolulu",
+    "state": "HI",
+    "country": "USA",
+    "lat": 21.33,
+    "lon": -157.93,
+    "elevation_ft": 16,
+    "climate_zone": "1A",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 90.1, "Twb_coincident": 73.8},
+      "cooling_db_010": {"Tdb": 89.2, "Twb_coincident": 73.5},
+      "cooling_db_020": {"Tdb": 88.5, "Twb_coincident": 73.2},
+      "cooling_wb_004": {"Twb": 75.8, "Tdb_coincident": 86.5},
+      "cooling_wb_010": {"Twb": 75.2, "Tdb_coincident": 86.0},
+      "cooling_wb_020": {"Twb": 74.7, "Tdb_coincident": 85.6},
+      "heating_996": {"Tdb": 62.3},
+      "heating_990": {"Tdb": 63.8}
+    }
+  },
+  {
+    "name": "Chicago",
+    "state": "IL",
+    "country": "USA",
+    "lat": 41.78,
+    "lon": -87.75,
+    "elevation_ft": 673,
+    "climate_zone": "5A",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 94.0, "Twb_coincident": 75.1},
+      "cooling_db_010": {"Tdb": 91.4, "Twb_coincident": 74.3},
+      "cooling_db_020": {"Tdb": 89.1, "Twb_coincident": 73.5},
+      "cooling_wb_004": {"Twb": 77.8, "Tdb_coincident": 88.6},
+      "cooling_wb_010": {"Twb": 76.5, "Tdb_coincident": 87.0},
+      "cooling_wb_020": {"Twb": 75.3, "Tdb_coincident": 85.5},
+      "heating_996": {"Tdb": -3.0},
+      "heating_990": {"Tdb": 1.0}
+    }
+  },
+  {
+    "name": "Indianapolis",
+    "state": "IN",
+    "country": "USA",
+    "lat": 39.72,
+    "lon": -86.28,
+    "elevation_ft": 807,
+    "climate_zone": "5A",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 93.1, "Twb_coincident": 75.5},
+      "cooling_db_010": {"Tdb": 90.8, "Twb_coincident": 74.8},
+      "cooling_db_020": {"Tdb": 88.6, "Twb_coincident": 74.1},
+      "cooling_wb_004": {"Twb": 77.8, "Tdb_coincident": 88.1},
+      "cooling_wb_010": {"Twb": 76.6, "Tdb_coincident": 86.8},
+      "cooling_wb_020": {"Twb": 75.5, "Tdb_coincident": 85.5},
+      "heating_996": {"Tdb": 2.0},
+      "heating_990": {"Tdb": 7.0}
+    }
+  },
+  {
+    "name": "New Orleans",
+    "state": "LA",
+    "country": "USA",
+    "lat": 30.0,
+    "lon": -90.25,
+    "elevation_ft": 30,
+    "climate_zone": "2A",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 95.0, "Twb_coincident": 78.7},
+      "cooling_db_010": {"Tdb": 93.5, "Twb_coincident": 78.3},
+      "cooling_db_020": {"Tdb": 92.2, "Twb_coincident": 78.0},
+      "cooling_wb_004": {"Twb": 80.3, "Tdb_coincident": 90.5},
+      "cooling_wb_010": {"Twb": 79.7, "Tdb_coincident": 89.8},
+      "cooling_wb_020": {"Twb": 79.2, "Tdb_coincident": 89.2},
+      "heating_996": {"Tdb": 31.2},
+      "heating_990": {"Tdb": 35.0}
+    }
+  },
+  {
+    "name": "Boston",
+    "state": "MA",
+    "country": "USA",
+    "lat": 42.36,
+    "lon": -71.01,
+    "elevation_ft": 30,
+    "climate_zone": "5A",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 92.4, "Twb_coincident": 73.6},
+      "cooling_db_010": {"Tdb": 89.4, "Twb_coincident": 72.5},
+      "cooling_db_020": {"Tdb": 86.5, "Twb_coincident": 71.7},
+      "cooling_wb_004": {"Twb": 76.1, "Tdb_coincident": 86.8},
+      "cooling_wb_010": {"Twb": 74.6, "Tdb_coincident": 85.0},
+      "cooling_wb_020": {"Twb": 73.3, "Tdb_coincident": 83.3},
+      "heating_996": {"Tdb": 7.0},
+      "heating_990": {"Tdb": 11.0}
+    }
+  },
+  {
+    "name": "Detroit",
+    "state": "MI",
+    "country": "USA",
+    "lat": 42.41,
+    "lon": -83.01,
+    "elevation_ft": 643,
+    "climate_zone": "5A",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 91.9, "Twb_coincident": 74.2},
+      "cooling_db_010": {"Tdb": 89.3, "Twb_coincident": 73.3},
+      "cooling_db_020": {"Tdb": 86.8, "Twb_coincident": 72.4},
+      "cooling_wb_004": {"Twb": 76.5, "Tdb_coincident": 87.0},
+      "cooling_wb_010": {"Twb": 75.2, "Tdb_coincident": 85.3},
+      "cooling_wb_020": {"Twb": 74.0, "Tdb_coincident": 83.8},
+      "heating_996": {"Tdb": 3.5},
+      "heating_990": {"Tdb": 7.5}
+    }
+  },
+  {
+    "name": "Minneapolis",
+    "state": "MN",
+    "country": "USA",
+    "lat": 44.88,
+    "lon": -93.22,
+    "elevation_ft": 837,
+    "climate_zone": "6A",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 92.8, "Twb_coincident": 74.0},
+      "cooling_db_010": {"Tdb": 90.0, "Twb_coincident": 73.0},
+      "cooling_db_020": {"Tdb": 87.4, "Twb_coincident": 72.1},
+      "cooling_wb_004": {"Twb": 76.7, "Tdb_coincident": 87.5},
+      "cooling_wb_010": {"Twb": 75.3, "Tdb_coincident": 85.8},
+      "cooling_wb_020": {"Twb": 74.0, "Tdb_coincident": 84.2},
+      "heating_996": {"Tdb": -12.0},
+      "heating_990": {"Tdb": -6.4}
+    }
+  },
+  {
+    "name": "Kansas City",
+    "state": "MO",
+    "country": "USA",
+    "lat": 39.32,
+    "lon": -94.71,
+    "elevation_ft": 1024,
+    "climate_zone": "4A",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 98.5, "Twb_coincident": 76.0},
+      "cooling_db_010": {"Tdb": 95.8, "Twb_coincident": 75.5},
+      "cooling_db_020": {"Tdb": 93.5, "Twb_coincident": 75.0},
+      "cooling_wb_004": {"Twb": 78.6, "Tdb_coincident": 91.2},
+      "cooling_wb_010": {"Twb": 77.5, "Tdb_coincident": 90.0},
+      "cooling_wb_020": {"Twb": 76.5, "Tdb_coincident": 89.0},
+      "heating_996": {"Tdb": 2.5},
+      "heating_990": {"Tdb": 7.5}
+    }
+  },
+  {
+    "name": "St. Louis",
+    "state": "MO",
+    "country": "USA",
+    "lat": 38.75,
+    "lon": -90.37,
+    "elevation_ft": 564,
+    "climate_zone": "4A",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 97.2, "Twb_coincident": 76.5},
+      "cooling_db_010": {"Tdb": 95.0, "Twb_coincident": 76.0},
+      "cooling_db_020": {"Tdb": 92.8, "Twb_coincident": 75.5},
+      "cooling_wb_004": {"Twb": 79.0, "Tdb_coincident": 91.5},
+      "cooling_wb_010": {"Twb": 77.8, "Tdb_coincident": 90.3},
+      "cooling_wb_020": {"Twb": 76.8, "Tdb_coincident": 89.2},
+      "heating_996": {"Tdb": 4.0},
+      "heating_990": {"Tdb": 8.5}
+    }
+  },
+  {
+    "name": "Las Vegas",
+    "state": "NV",
+    "country": "USA",
+    "lat": 36.08,
+    "lon": -115.15,
+    "elevation_ft": 2178,
+    "climate_zone": "3B",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 111.5, "Twb_coincident": 66.5},
+      "cooling_db_010": {"Tdb": 109.5, "Twb_coincident": 66.0},
+      "cooling_db_020": {"Tdb": 107.7, "Twb_coincident": 65.6},
+      "cooling_wb_004": {"Twb": 71.3, "Tdb_coincident": 100.8},
+      "cooling_wb_010": {"Twb": 70.2, "Tdb_coincident": 99.5},
+      "cooling_wb_020": {"Twb": 69.2, "Tdb_coincident": 98.5},
+      "heating_996": {"Tdb": 30.5},
+      "heating_990": {"Tdb": 33.8}
+    }
+  },
+  {
+    "name": "New York City",
+    "state": "NY",
+    "country": "USA",
+    "lat": 40.78,
+    "lon": -73.97,
+    "elevation_ft": 33,
+    "climate_zone": "4A",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 93.5, "Twb_coincident": 75.0},
+      "cooling_db_010": {"Tdb": 91.0, "Twb_coincident": 74.2},
+      "cooling_db_020": {"Tdb": 88.4, "Twb_coincident": 73.5},
+      "cooling_wb_004": {"Twb": 77.3, "Tdb_coincident": 87.5},
+      "cooling_wb_010": {"Twb": 76.0, "Tdb_coincident": 86.0},
+      "cooling_wb_020": {"Twb": 74.8, "Tdb_coincident": 84.5},
+      "heating_996": {"Tdb": 12.5},
+      "heating_990": {"Tdb": 17.0}
+    }
+  },
+  {
+    "name": "Charlotte",
+    "state": "NC",
+    "country": "USA",
+    "lat": 35.21,
+    "lon": -80.94,
+    "elevation_ft": 768,
+    "climate_zone": "3A",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 96.2, "Twb_coincident": 75.0},
+      "cooling_db_010": {"Tdb": 93.8, "Twb_coincident": 74.5},
+      "cooling_db_020": {"Tdb": 91.7, "Twb_coincident": 74.0},
+      "cooling_wb_004": {"Twb": 77.1, "Tdb_coincident": 89.5},
+      "cooling_wb_010": {"Twb": 76.2, "Tdb_coincident": 88.5},
+      "cooling_wb_020": {"Twb": 75.4, "Tdb_coincident": 87.5},
+      "heating_996": {"Tdb": 20.0},
+      "heating_990": {"Tdb": 23.5}
+    }
+  },
+  {
+    "name": "Columbus",
+    "state": "OH",
+    "country": "USA",
+    "lat": 40.0,
+    "lon": -82.88,
+    "elevation_ft": 905,
+    "climate_zone": "5A",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 92.4, "Twb_coincident": 74.8},
+      "cooling_db_010": {"Tdb": 90.0, "Twb_coincident": 74.0},
+      "cooling_db_020": {"Tdb": 87.7, "Twb_coincident": 73.2},
+      "cooling_wb_004": {"Twb": 77.0, "Tdb_coincident": 87.5},
+      "cooling_wb_010": {"Twb": 75.8, "Tdb_coincident": 86.0},
+      "cooling_wb_020": {"Twb": 74.6, "Tdb_coincident": 84.5},
+      "heating_996": {"Tdb": 3.0},
+      "heating_990": {"Tdb": 7.5}
+    }
+  },
+  {
+    "name": "Portland",
+    "state": "OR",
+    "country": "USA",
+    "lat": 45.59,
+    "lon": -122.60,
+    "elevation_ft": 21,
+    "climate_zone": "4C",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 93.5, "Twb_coincident": 67.5},
+      "cooling_db_010": {"Tdb": 89.5, "Twb_coincident": 66.5},
+      "cooling_db_020": {"Tdb": 85.8, "Twb_coincident": 65.5},
+      "cooling_wb_004": {"Twb": 68.8, "Tdb_coincident": 88.0},
+      "cooling_wb_010": {"Twb": 67.3, "Tdb_coincident": 85.0},
+      "cooling_wb_020": {"Twb": 66.0, "Tdb_coincident": 82.5},
+      "heating_996": {"Tdb": 23.0},
+      "heating_990": {"Tdb": 27.5}
+    }
+  },
+  {
+    "name": "Philadelphia",
+    "state": "PA",
+    "country": "USA",
+    "lat": 39.87,
+    "lon": -75.23,
+    "elevation_ft": 30,
+    "climate_zone": "4A",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 94.8, "Twb_coincident": 75.8},
+      "cooling_db_010": {"Tdb": 92.1, "Twb_coincident": 75.0},
+      "cooling_db_020": {"Tdb": 89.5, "Twb_coincident": 74.2},
+      "cooling_wb_004": {"Twb": 78.0, "Tdb_coincident": 88.5},
+      "cooling_wb_010": {"Twb": 76.7, "Tdb_coincident": 87.0},
+      "cooling_wb_020": {"Twb": 75.5, "Tdb_coincident": 85.5},
+      "heating_996": {"Tdb": 12.0},
+      "heating_990": {"Tdb": 15.5}
+    }
+  },
+  {
+    "name": "Pittsburgh",
+    "state": "PA",
+    "country": "USA",
+    "lat": 40.50,
+    "lon": -80.23,
+    "elevation_ft": 1224,
+    "climate_zone": "5A",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 91.0, "Twb_coincident": 73.5},
+      "cooling_db_010": {"Tdb": 88.5, "Twb_coincident": 72.5},
+      "cooling_db_020": {"Tdb": 86.2, "Twb_coincident": 71.8},
+      "cooling_wb_004": {"Twb": 75.5, "Tdb_coincident": 86.0},
+      "cooling_wb_010": {"Twb": 74.3, "Tdb_coincident": 84.5},
+      "cooling_wb_020": {"Twb": 73.2, "Tdb_coincident": 83.0},
+      "heating_996": {"Tdb": 5.0},
+      "heating_990": {"Tdb": 9.5}
+    }
+  },
+  {
+    "name": "Dallas",
+    "state": "TX",
+    "country": "USA",
+    "lat": 32.90,
+    "lon": -97.04,
+    "elevation_ft": 597,
+    "climate_zone": "3A",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 103.5, "Twb_coincident": 75.0},
+      "cooling_db_010": {"Tdb": 101.5, "Twb_coincident": 74.8},
+      "cooling_db_020": {"Tdb": 99.8, "Twb_coincident": 74.5},
+      "cooling_wb_004": {"Twb": 78.5, "Tdb_coincident": 93.0},
+      "cooling_wb_010": {"Twb": 77.8, "Tdb_coincident": 92.0},
+      "cooling_wb_020": {"Twb": 77.1, "Tdb_coincident": 91.0},
+      "heating_996": {"Tdb": 19.5},
+      "heating_990": {"Tdb": 23.0}
+    }
+  },
+  {
+    "name": "Houston",
+    "state": "TX",
+    "country": "USA",
+    "lat": 29.99,
+    "lon": -95.37,
+    "elevation_ft": 96,
+    "climate_zone": "2A",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 98.5, "Twb_coincident": 77.8},
+      "cooling_db_010": {"Tdb": 96.8, "Twb_coincident": 77.5},
+      "cooling_db_020": {"Tdb": 95.3, "Twb_coincident": 77.2},
+      "cooling_wb_004": {"Twb": 79.8, "Tdb_coincident": 92.5},
+      "cooling_wb_010": {"Twb": 79.2, "Tdb_coincident": 91.5},
+      "cooling_wb_020": {"Twb": 78.7, "Tdb_coincident": 90.8},
+      "heating_996": {"Tdb": 29.0},
+      "heating_990": {"Tdb": 33.0}
+    }
+  },
+  {
+    "name": "San Antonio",
+    "state": "TX",
+    "country": "USA",
+    "lat": 29.53,
+    "lon": -98.47,
+    "elevation_ft": 794,
+    "climate_zone": "2A",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 101.5, "Twb_coincident": 74.5},
+      "cooling_db_010": {"Tdb": 99.8, "Twb_coincident": 74.2},
+      "cooling_db_020": {"Tdb": 98.2, "Twb_coincident": 74.0},
+      "cooling_wb_004": {"Twb": 78.0, "Tdb_coincident": 91.5},
+      "cooling_wb_010": {"Twb": 77.2, "Tdb_coincident": 90.8},
+      "cooling_wb_020": {"Twb": 76.5, "Tdb_coincident": 90.0},
+      "heating_996": {"Tdb": 27.0},
+      "heating_990": {"Tdb": 30.5}
+    }
+  },
+  {
+    "name": "Austin",
+    "state": "TX",
+    "country": "USA",
+    "lat": 30.18,
+    "lon": -97.68,
+    "elevation_ft": 597,
+    "climate_zone": "2A",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 102.5, "Twb_coincident": 74.8},
+      "cooling_db_010": {"Tdb": 100.5, "Twb_coincident": 74.5},
+      "cooling_db_020": {"Tdb": 98.8, "Twb_coincident": 74.2},
+      "cooling_wb_004": {"Twb": 78.0, "Tdb_coincident": 92.0},
+      "cooling_wb_010": {"Twb": 77.3, "Tdb_coincident": 91.2},
+      "cooling_wb_020": {"Twb": 76.6, "Tdb_coincident": 90.5},
+      "heating_996": {"Tdb": 26.5},
+      "heating_990": {"Tdb": 30.0}
+    }
+  },
+  {
+    "name": "Salt Lake City",
+    "state": "UT",
+    "country": "USA",
+    "lat": 40.78,
+    "lon": -111.97,
+    "elevation_ft": 4227,
+    "climate_zone": "5B",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 99.5, "Twb_coincident": 62.5},
+      "cooling_db_010": {"Tdb": 97.0, "Twb_coincident": 62.0},
+      "cooling_db_020": {"Tdb": 94.8, "Twb_coincident": 61.5},
+      "cooling_wb_004": {"Twb": 65.5, "Tdb_coincident": 91.5},
+      "cooling_wb_010": {"Twb": 64.2, "Tdb_coincident": 90.0},
+      "cooling_wb_020": {"Twb": 63.0, "Tdb_coincident": 88.5},
+      "heating_996": {"Tdb": 7.0},
+      "heating_990": {"Tdb": 12.0}
+    }
+  },
+  {
+    "name": "Seattle",
+    "state": "WA",
+    "country": "USA",
+    "lat": 47.45,
+    "lon": -122.30,
+    "elevation_ft": 433,
+    "climate_zone": "4C",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 89.1, "Twb_coincident": 65.8},
+      "cooling_db_010": {"Tdb": 85.0, "Twb_coincident": 64.5},
+      "cooling_db_020": {"Tdb": 81.5, "Twb_coincident": 63.5},
+      "cooling_wb_004": {"Twb": 67.0, "Tdb_coincident": 83.5},
+      "cooling_wb_010": {"Twb": 65.5, "Tdb_coincident": 80.5},
+      "cooling_wb_020": {"Twb": 64.2, "Tdb_coincident": 78.0},
+      "heating_996": {"Tdb": 24.5},
+      "heating_990": {"Tdb": 28.5}
+    }
+  },
+  {
+    "name": "Washington DC",
+    "state": "DC",
+    "country": "USA",
+    "lat": 38.85,
+    "lon": -77.04,
+    "elevation_ft": 66,
+    "climate_zone": "4A",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 96.2, "Twb_coincident": 76.5},
+      "cooling_db_010": {"Tdb": 93.5, "Twb_coincident": 75.8},
+      "cooling_db_020": {"Tdb": 91.0, "Twb_coincident": 75.0},
+      "cooling_wb_004": {"Twb": 78.5, "Tdb_coincident": 90.0},
+      "cooling_wb_010": {"Twb": 77.3, "Tdb_coincident": 88.5},
+      "cooling_wb_020": {"Twb": 76.2, "Tdb_coincident": 87.0},
+      "heating_996": {"Tdb": 15.5},
+      "heating_990": {"Tdb": 19.5}
+    }
+  },
+  {
+    "name": "Nashville",
+    "state": "TN",
+    "country": "USA",
+    "lat": 36.12,
+    "lon": -86.69,
+    "elevation_ft": 590,
+    "climate_zone": "4A",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 96.5, "Twb_coincident": 76.0},
+      "cooling_db_010": {"Tdb": 94.2, "Twb_coincident": 75.5},
+      "cooling_db_020": {"Tdb": 92.2, "Twb_coincident": 75.0},
+      "cooling_wb_004": {"Twb": 78.5, "Tdb_coincident": 90.5},
+      "cooling_wb_010": {"Twb": 77.5, "Tdb_coincident": 89.5},
+      "cooling_wb_020": {"Twb": 76.5, "Tdb_coincident": 88.5},
+      "heating_996": {"Tdb": 12.0},
+      "heating_990": {"Tdb": 16.5}
+    }
+  },
+  {
+    "name": "Memphis",
+    "state": "TN",
+    "country": "USA",
+    "lat": 35.06,
+    "lon": -89.99,
+    "elevation_ft": 285,
+    "climate_zone": "3A",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 97.5, "Twb_coincident": 77.5},
+      "cooling_db_010": {"Tdb": 95.5, "Twb_coincident": 77.0},
+      "cooling_db_020": {"Tdb": 93.5, "Twb_coincident": 76.5},
+      "cooling_wb_004": {"Twb": 80.0, "Tdb_coincident": 91.0},
+      "cooling_wb_010": {"Twb": 79.0, "Tdb_coincident": 90.0},
+      "cooling_wb_020": {"Twb": 78.2, "Tdb_coincident": 89.0},
+      "heating_996": {"Tdb": 16.5},
+      "heating_990": {"Tdb": 21.0}
+    }
+  },
+  {
+    "name": "Milwaukee",
+    "state": "WI",
+    "country": "USA",
+    "lat": 42.95,
+    "lon": -87.90,
+    "elevation_ft": 692,
+    "climate_zone": "6A",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 91.0, "Twb_coincident": 74.0},
+      "cooling_db_010": {"Tdb": 88.5, "Twb_coincident": 73.0},
+      "cooling_db_020": {"Tdb": 86.0, "Twb_coincident": 72.0},
+      "cooling_wb_004": {"Twb": 76.5, "Tdb_coincident": 86.0},
+      "cooling_wb_010": {"Twb": 75.0, "Tdb_coincident": 84.0},
+      "cooling_wb_020": {"Twb": 73.8, "Tdb_coincident": 82.5},
+      "heating_996": {"Tdb": -5.0},
+      "heating_990": {"Tdb": 0.0}
+    }
+  },
+  {
+    "name": "Albuquerque",
+    "state": "NM",
+    "country": "USA",
+    "lat": 35.04,
+    "lon": -106.62,
+    "elevation_ft": 5312,
+    "climate_zone": "4B",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 98.5, "Twb_coincident": 61.0},
+      "cooling_db_010": {"Tdb": 96.5, "Twb_coincident": 60.5},
+      "cooling_db_020": {"Tdb": 94.5, "Twb_coincident": 60.0},
+      "cooling_wb_004": {"Twb": 64.5, "Tdb_coincident": 88.5},
+      "cooling_wb_010": {"Twb": 63.5, "Tdb_coincident": 87.5},
+      "cooling_wb_020": {"Twb": 62.5, "Tdb_coincident": 86.5},
+      "heating_996": {"Tdb": 14.5},
+      "heating_990": {"Tdb": 19.0}
+    }
+  },
+  {
+    "name": "Raleigh",
+    "state": "NC",
+    "country": "USA",
+    "lat": 35.87,
+    "lon": -78.79,
+    "elevation_ft": 434,
+    "climate_zone": "4A",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 96.0, "Twb_coincident": 76.0},
+      "cooling_db_010": {"Tdb": 93.5, "Twb_coincident": 75.5},
+      "cooling_db_020": {"Tdb": 91.2, "Twb_coincident": 75.0},
+      "cooling_wb_004": {"Twb": 78.0, "Tdb_coincident": 89.5},
+      "cooling_wb_010": {"Twb": 77.0, "Tdb_coincident": 88.5},
+      "cooling_wb_020": {"Twb": 76.2, "Tdb_coincident": 87.5},
+      "heating_996": {"Tdb": 19.0},
+      "heating_990": {"Tdb": 23.0}
+    }
+  },
+  {
+    "name": "Baltimore",
+    "state": "MD",
+    "country": "USA",
+    "lat": 39.18,
+    "lon": -76.67,
+    "elevation_ft": 146,
+    "climate_zone": "4A",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 95.5, "Twb_coincident": 76.0},
+      "cooling_db_010": {"Tdb": 93.0, "Twb_coincident": 75.2},
+      "cooling_db_020": {"Tdb": 90.5, "Twb_coincident": 74.5},
+      "cooling_wb_004": {"Twb": 78.0, "Tdb_coincident": 89.5},
+      "cooling_wb_010": {"Twb": 77.0, "Tdb_coincident": 88.0},
+      "cooling_wb_020": {"Twb": 76.0, "Tdb_coincident": 86.5},
+      "heating_996": {"Tdb": 13.0},
+      "heating_990": {"Tdb": 17.0}
+    }
+  },
+  {
+    "name": "Jacksonville",
+    "state": "FL",
+    "country": "USA",
+    "lat": 30.49,
+    "lon": -81.69,
+    "elevation_ft": 30,
+    "climate_zone": "2A",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 96.5, "Twb_coincident": 77.5},
+      "cooling_db_010": {"Tdb": 95.0, "Twb_coincident": 77.0},
+      "cooling_db_020": {"Tdb": 93.5, "Twb_coincident": 76.5},
+      "cooling_wb_004": {"Twb": 79.5, "Tdb_coincident": 90.5},
+      "cooling_wb_010": {"Twb": 78.8, "Tdb_coincident": 89.8},
+      "cooling_wb_020": {"Twb": 78.2, "Tdb_coincident": 89.2},
+      "heating_996": {"Tdb": 30.0},
+      "heating_990": {"Tdb": 34.5}
+    }
+  },
+  {
+    "name": "Anchorage",
+    "state": "AK",
+    "country": "USA",
+    "lat": 61.17,
+    "lon": -150.02,
+    "elevation_ft": 131,
+    "climate_zone": "7",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 73.0, "Twb_coincident": 58.5},
+      "cooling_db_010": {"Tdb": 70.0, "Twb_coincident": 57.5},
+      "cooling_db_020": {"Tdb": 67.5, "Twb_coincident": 56.5},
+      "cooling_wb_004": {"Twb": 60.0, "Tdb_coincident": 70.0},
+      "cooling_wb_010": {"Twb": 58.5, "Tdb_coincident": 68.0},
+      "cooling_wb_020": {"Twb": 57.2, "Tdb_coincident": 66.5},
+      "heating_996": {"Tdb": -10.0},
+      "heating_990": {"Tdb": -4.0}
+    }
+  },
+  {
+    "name": "Fairbanks",
+    "state": "AK",
+    "country": "USA",
+    "lat": 64.82,
+    "lon": -147.87,
+    "elevation_ft": 436,
+    "climate_zone": "8",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 82.5, "Twb_coincident": 60.5},
+      "cooling_db_010": {"Tdb": 79.0, "Twb_coincident": 59.5},
+      "cooling_db_020": {"Tdb": 76.0, "Twb_coincident": 58.5},
+      "cooling_wb_004": {"Twb": 62.0, "Tdb_coincident": 78.0},
+      "cooling_wb_010": {"Twb": 60.5, "Tdb_coincident": 76.0},
+      "cooling_wb_020": {"Twb": 59.0, "Tdb_coincident": 74.0},
+      "heating_996": {"Tdb": -43.0},
+      "heating_990": {"Tdb": -38.0}
+    }
+  },
+  {
+    "name": "Boise",
+    "state": "ID",
+    "country": "USA",
+    "lat": 43.57,
+    "lon": -116.22,
+    "elevation_ft": 2871,
+    "climate_zone": "5B",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 100.5, "Twb_coincident": 64.0},
+      "cooling_db_010": {"Tdb": 97.5, "Twb_coincident": 63.0},
+      "cooling_db_020": {"Tdb": 95.0, "Twb_coincident": 62.0},
+      "cooling_wb_004": {"Twb": 66.0, "Tdb_coincident": 93.5},
+      "cooling_wb_010": {"Twb": 64.8, "Tdb_coincident": 91.5},
+      "cooling_wb_020": {"Twb": 63.5, "Tdb_coincident": 89.5},
+      "heating_996": {"Tdb": 4.0},
+      "heating_990": {"Tdb": 10.0}
+    }
+  },
+  {
+    "name": "Oklahoma City",
+    "state": "OK",
+    "country": "USA",
+    "lat": 35.39,
+    "lon": -97.60,
+    "elevation_ft": 1285,
+    "climate_zone": "3A",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 101.5, "Twb_coincident": 74.5},
+      "cooling_db_010": {"Tdb": 99.0, "Twb_coincident": 74.0},
+      "cooling_db_020": {"Tdb": 97.0, "Twb_coincident": 73.5},
+      "cooling_wb_004": {"Twb": 77.5, "Tdb_coincident": 92.5},
+      "cooling_wb_010": {"Twb": 76.5, "Tdb_coincident": 91.0},
+      "cooling_wb_020": {"Twb": 75.8, "Tdb_coincident": 90.0},
+      "heating_996": {"Tdb": 10.5},
+      "heating_990": {"Tdb": 15.0}
+    }
+  },
+  {
+    "name": "Omaha",
+    "state": "NE",
+    "country": "USA",
+    "lat": 41.32,
+    "lon": -95.90,
+    "elevation_ft": 983,
+    "climate_zone": "5A",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 97.0, "Twb_coincident": 76.0},
+      "cooling_db_010": {"Tdb": 94.2, "Twb_coincident": 75.0},
+      "cooling_db_020": {"Tdb": 91.5, "Twb_coincident": 74.0},
+      "cooling_wb_004": {"Twb": 78.5, "Tdb_coincident": 90.5},
+      "cooling_wb_010": {"Twb": 77.0, "Tdb_coincident": 89.0},
+      "cooling_wb_020": {"Twb": 75.8, "Tdb_coincident": 87.5},
+      "heating_996": {"Tdb": -5.0},
+      "heating_990": {"Tdb": 0.0}
+    }
+  },
+  {
+    "name": "Richmond",
+    "state": "VA",
+    "country": "USA",
+    "lat": 37.51,
+    "lon": -77.32,
+    "elevation_ft": 167,
+    "climate_zone": "4A",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 96.0, "Twb_coincident": 76.5},
+      "cooling_db_010": {"Tdb": 93.5, "Twb_coincident": 76.0},
+      "cooling_db_020": {"Tdb": 91.0, "Twb_coincident": 75.5},
+      "cooling_wb_004": {"Twb": 78.5, "Tdb_coincident": 90.0},
+      "cooling_wb_010": {"Twb": 77.5, "Tdb_coincident": 88.5},
+      "cooling_wb_020": {"Twb": 76.5, "Tdb_coincident": 87.0},
+      "heating_996": {"Tdb": 16.0},
+      "heating_990": {"Tdb": 20.0}
+    }
+  },
+  {
+    "name": "Buffalo",
+    "state": "NY",
+    "country": "USA",
+    "lat": 42.94,
+    "lon": -78.74,
+    "elevation_ft": 705,
+    "climate_zone": "5A",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 89.0, "Twb_coincident": 72.5},
+      "cooling_db_010": {"Tdb": 86.5, "Twb_coincident": 71.5},
+      "cooling_db_020": {"Tdb": 84.0, "Twb_coincident": 70.5},
+      "cooling_wb_004": {"Twb": 74.5, "Tdb_coincident": 84.5},
+      "cooling_wb_010": {"Twb": 73.2, "Tdb_coincident": 82.5},
+      "cooling_wb_020": {"Twb": 72.0, "Tdb_coincident": 81.0},
+      "heating_996": {"Tdb": 3.0},
+      "heating_990": {"Tdb": 7.0}
+    }
+  },
+  {
+    "name": "Hartford",
+    "state": "CT",
+    "country": "USA",
+    "lat": 41.94,
+    "lon": -72.68,
+    "elevation_ft": 174,
+    "climate_zone": "5A",
+    "conditions": {
+      "cooling_db_004": {"Tdb": 92.5, "Twb_coincident": 74.5},
+      "cooling_db_010": {"Tdb": 89.5, "Twb_coincident": 73.5},
+      "cooling_db_020": {"Tdb": 86.8, "Twb_coincident": 72.5},
+      "cooling_wb_004": {"Twb": 76.5, "Tdb_coincident": 87.0},
+      "cooling_wb_010": {"Twb": 75.2, "Tdb_coincident": 85.5},
+      "cooling_wb_020": {"Twb": 73.8, "Tdb_coincident": 83.5},
+      "heating_996": {"Tdb": 3.0},
+      "heating_990": {"Tdb": 7.5}
+    }
+  }
+]
