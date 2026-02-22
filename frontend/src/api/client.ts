@@ -1,4 +1,4 @@
-import type { ChartData, StatePointInput, StatePointOutput, UnitSystem } from "../types/psychro";
+import type { ChartData, StatePointInput, StatePointOutput, ProcessInput, ProcessOutput, UnitSystem } from "../types/psychro";
 
 const BASE_URL = "/api/v1";
 
@@ -29,6 +29,15 @@ export async function resolveStatePoint(
   input: StatePointInput
 ): Promise<StatePointOutput> {
   return fetchJSON<StatePointOutput>(`${BASE_URL}/state-point`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function calculateProcess(
+  input: ProcessInput
+): Promise<ProcessOutput> {
+  return fetchJSON<ProcessOutput>(`${BASE_URL}/process`, {
     method: "POST",
     body: JSON.stringify(input),
   });
