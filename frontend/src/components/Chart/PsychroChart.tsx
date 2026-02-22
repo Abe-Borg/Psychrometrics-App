@@ -39,6 +39,8 @@ const PROCESS_COLORS: Record<string, string> = {
   direct_evaporative: "#f5c45b",
   indirect_evaporative: "#f5c45b",
   indirect_direct_evaporative: "#f5c45b",
+  chemical_dehumidification: "#c45bf5",
+  sensible_reheat: "#ff6348",
 };
 
 const PROCESS_LABELS: Record<string, string> = {
@@ -52,6 +54,8 @@ const PROCESS_LABELS: Record<string, string> = {
   direct_evaporative: "Direct Evap.",
   indirect_evaporative: "Indirect Evap.",
   indirect_direct_evaporative: "IDEC (Two-Stage)",
+  chemical_dehumidification: "Chem. Dehum.",
+  sensible_reheat: "Sensible Reheat",
 };
 
 export default function PsychroChart() {
@@ -324,8 +328,8 @@ export default function PsychroChart() {
     const ranges = chartData?.ranges;
     const isIP = unitSystem === "IP";
 
-    // Process direction arrows
-    const annotations = processes.map((proc) => {
+    // Process direction arrows + numbering labels
+    const arrowAnnotations = processes.map((proc) => {
       const pts = proc.path_points;
       const color = PROCESS_COLORS[proc.process_type] ?? "#aaa";
       const fromIdx = Math.floor(pts.length * 0.4);
@@ -350,6 +354,30 @@ export default function PsychroChart() {
         text: "",
       };
     });
+
+    // Process number labels at midpoint of each process line
+    const numberAnnotations = processes.map((proc, i) => {
+      const pts = proc.path_points;
+      const color = PROCESS_COLORS[proc.process_type] ?? "#aaa";
+      const midIdx = Math.floor(pts.length / 2);
+      const mid = pts[midIdx];
+      return {
+        x: mid.Tdb,
+        y: mid.W_display,
+        xref: "x" as const,
+        yref: "y" as const,
+        text: `<b>${i + 1}</b>`,
+        showarrow: false,
+        font: { size: 11, color, family: "IBM Plex Sans" },
+        bgcolor: "rgba(15,17,23,0.8)",
+        bordercolor: color,
+        borderwidth: 1,
+        borderpad: 2,
+        yshift: 12,
+      };
+    });
+
+    const annotations = [...arrowAnnotations, ...numberAnnotations];
 
     return {
       autosize: true,

@@ -21,6 +21,8 @@ class ProcessType(str, Enum):
     DIRECT_EVAPORATIVE = "direct_evaporative"
     INDIRECT_EVAPORATIVE = "indirect_evaporative"
     INDIRECT_DIRECT_EVAPORATIVE = "indirect_direct_evaporative"
+    CHEMICAL_DEHUMIDIFICATION = "chemical_dehumidification"
+    SENSIBLE_REHEAT = "sensible_reheat"
 
 
 class SensibleMode(str, Enum):
@@ -38,6 +40,11 @@ class HumidificationMode(str, Enum):
     TARGET_RH = "target_rh"       # target relative humidity (0-100)
     TARGET_W = "target_w"         # target humidity ratio (lb/lb or kg/kg)
     EFFECTIVENESS = "effectiveness"  # humidifier effectiveness (0-1)
+
+
+class DehumidificationMode(str, Enum):
+    TARGET_RH = "target_rh"       # target RH after desiccant
+    TARGET_W = "target_w"         # target humidity ratio after desiccant
 
 
 class ProcessInput(BaseModel):
@@ -82,6 +89,9 @@ class ProcessInput(BaseModel):
     dec_effectiveness: Optional[float] = None  # direct stage effectiveness (0-1)
     secondary_air_pair: Optional[tuple[str, str]] = None  # secondary air input pair
     secondary_air_values: Optional[tuple[float, float]] = None  # secondary air values
+
+    # Chemical dehumidification parameters
+    dehum_mode: Optional[DehumidificationMode] = None
 
 
 class PathPoint(BaseModel):

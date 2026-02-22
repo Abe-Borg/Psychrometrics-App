@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useStore } from "../../store/useStore";
 import { calculateProcess } from "../../api/client";
-import type { ProcessType, SensibleMode, CoolingDehumMode, HumidificationMode } from "../../types/psychro";
+import { fmt } from "../../utils/formatting";
+import type { ProcessType, SensibleMode, CoolingDehumMode, HumidificationMode, DehumidificationMode } from "../../types/psychro";
 
 const PROCESS_TYPES: { value: ProcessType; label: string }[] = [
   { value: "sensible_heating", label: "Sensible Heating" },
@@ -14,6 +15,8 @@ const PROCESS_TYPES: { value: ProcessType; label: string }[] = [
   { value: "direct_evaporative", label: "Direct Evaporative" },
   { value: "indirect_evaporative", label: "Indirect Evaporative" },
   { value: "indirect_direct_evaporative", label: "Indirect-Direct (Two-Stage)" },
+  { value: "chemical_dehumidification", label: "Chemical Dehumidification" },
+  { value: "sensible_reheat", label: "Sensible Reheat" },
 ];
 
 const INPUT_PAIRS: { value: [string, string]; label: string }[] = [
@@ -47,6 +50,11 @@ const ADIABATIC_HUMID_MODES: { value: HumidificationMode; label: string }[] = [
   { value: "target_rh", label: "Target RH" },
 ];
 
+const CHEM_DEHUM_MODES: { value: DehumidificationMode; label: string }[] = [
+  { value: "target_w", label: "Target W" },
+  { value: "target_rh", label: "Target RH" },
+];
+
 function getFieldLabels(
   pair: [string, string],
   unitSystem: string
@@ -75,11 +83,14 @@ const inputClass =
   "w-full px-2 py-1.5 bg-bg-tertiary border border-border rounded text-sm text-text-primary focus:outline-none focus:border-accent";
 
 export default function ProcessBuilder() {
-  const { unitSystem, pressure, addProcess } = useStore();
+  const { unitSystem, pressure, addProcess, processes } = useStore();
   const isIP = unitSystem === "IP";
 
   // Process type
   const [processType, setProcessType] = useState<ProcessType>("sensible_heating");
+
+  // Chain from previous
+  const [chainFromPrevious, setChainFromPrevious] = useState(false);
 
   // Start point
   const [startPairIndex, setStartPairIndex] = useState(0);
@@ -117,6 +128,9 @@ export default function ProcessBuilder() {
   const [iecEffectiveness, setIecEffectiveness] = useState("");
   const [decEffectiveness, setDecEffectiveness] = useState("");
 
+  // Chemical dehumidification
+  const [dehumMode, setDehumMode] = useState<DehumidificationMode>("target_w");
+
   // General
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -124,7 +138,7 @@ export default function ProcessBuilder() {
   const startPair = INPUT_PAIRS[startPairIndex].value;
   const [startLabel1, startLabel2] = getFieldLabels(startPair, unitSystem);
 
-  const isSensible = processType === "sensible_heating" || processType === "sensible_cooling";
+  const isSensible = processType === "sensible_heating" || processType === "sensible_cooling" || processType === "sensible_reheat";
 
   function resetProcessFields() {
     setSensibleMode("target_tdb");
@@ -148,25 +162,41 @@ export default function ProcessBuilder() {
     setWaterTemperature("");
     setIecEffectiveness("");
     setDecEffectiveness("");
+    setDehumMode("target_w");
     setError(null);
   }
+
+  // Derive chained start point from the last process's end point
+  const lastProcess = processes.length > 0 ? processes[processes.length - 1] : null;
+  const canChain = lastProcess !== null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    const sv1 = parseFloat(startVal1);
-    const sv2 = parseFloat(startVal2);
-    if (isNaN(sv1) || isNaN(sv2)) {
-      setError("Enter valid numbers for the start point");
-      return;
+    let startPointPair: [string, string];
+    let startPointValues: [number, number];
+
+    if (chainFromPrevious && lastProcess) {
+      // Use end point Tdb + RH from previous process as start
+      startPointPair = ["Tdb", "RH"];
+      startPointValues = [lastProcess.end_point.Tdb, lastProcess.end_point.RH];
+    } else {
+      const sv1 = parseFloat(startVal1);
+      const sv2 = parseFloat(startVal2);
+      if (isNaN(sv1) || isNaN(sv2)) {
+        setError("Enter valid numbers for the start point");
+        return;
+      }
+      startPointPair = startPair;
+      startPointValues = [sv1, sv2];
     }
 
     const input: Parameters<typeof calculateProcess>[0] = {
       process_type: processType,
       unit_system: unitSystem,
       pressure,
-      start_point_pair: startPair,
-      start_point_values: [sv1, sv2],
+      start_point_pair: startPointPair,
+      start_point_values: startPointValues,
     };
 
     // Process-specific fields
@@ -262,6 +292,17 @@ export default function ProcessBuilder() {
       if (ie < 0 || ie > 1 || de < 0 || de > 1) { setError("Effectiveness must be between 0 and 1"); return; }
       input.iec_effectiveness = ie;
       input.dec_effectiveness = de;
+    } else if (processType === "chemical_dehumidification") {
+      input.dehum_mode = dehumMode;
+      if (dehumMode === "target_w") {
+        const w = parseFloat(targetW);
+        if (isNaN(w)) { setError("Enter a valid target W"); return; }
+        input.target_W = w;
+      } else if (dehumMode === "target_rh") {
+        const rh = parseFloat(targetRH);
+        if (isNaN(rh)) { setError("Enter a valid target RH"); return; }
+        input.target_RH = rh;
+      }
     }
 
     setLoading(true);
@@ -298,50 +339,72 @@ export default function ProcessBuilder() {
         </select>
       </div>
 
-      {/* Start point */}
-      <div>
-        <label className="block text-xs text-text-muted mb-1">Start Point</label>
-        <select
-          value={startPairIndex}
-          onChange={(e) => {
-            setStartPairIndex(parseInt(e.target.value));
-            setStartVal1("");
-            setStartVal2("");
-            setError(null);
-          }}
-          className={selectClass}
-        >
-          {INPUT_PAIRS.map((p, i) => (
-            <option key={i} value={i}>
-              {p.label}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <label className="block text-xs text-text-muted mb-1">{startLabel1}</label>
+      {/* Chain from previous toggle */}
+      {canChain && (
+        <label className="flex items-center gap-2 cursor-pointer">
           <input
-            type="number"
-            value={startVal1}
-            onChange={(e) => setStartVal1(e.target.value)}
-            step={getFieldStep(startPair[0])}
-            placeholder="—"
-            className={inputClass}
+            type="checkbox"
+            checked={chainFromPrevious}
+            onChange={(e) => setChainFromPrevious(e.target.checked)}
+            className="accent-accent cursor-pointer"
           />
-        </div>
-        <div>
-          <label className="block text-xs text-text-muted mb-1">{startLabel2}</label>
-          <input
-            type="number"
-            value={startVal2}
-            onChange={(e) => setStartVal2(e.target.value)}
-            step={getFieldStep(startPair[1])}
-            placeholder="—"
-            className={inputClass}
-          />
-        </div>
-      </div>
+          <span className="text-xs text-text-muted">
+            Chain from Process {processes.length} end point
+            <span className="text-text-primary font-mono ml-1">
+              ({fmt(lastProcess!.end_point.Tdb, 1)}°, {fmt(lastProcess!.end_point.RH, 1)}% RH)
+            </span>
+          </span>
+        </label>
+      )}
+
+      {/* Start point (hidden when chaining) */}
+      {!chainFromPrevious && (
+        <>
+          <div>
+            <label className="block text-xs text-text-muted mb-1">Start Point</label>
+            <select
+              value={startPairIndex}
+              onChange={(e) => {
+                setStartPairIndex(parseInt(e.target.value));
+                setStartVal1("");
+                setStartVal2("");
+                setError(null);
+              }}
+              className={selectClass}
+            >
+              {INPUT_PAIRS.map((p, i) => (
+                <option key={i} value={i}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-xs text-text-muted mb-1">{startLabel1}</label>
+              <input
+                type="number"
+                value={startVal1}
+                onChange={(e) => setStartVal1(e.target.value)}
+                step={getFieldStep(startPair[0])}
+                placeholder="—"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-text-muted mb-1">{startLabel2}</label>
+              <input
+                type="number"
+                value={startVal2}
+                onChange={(e) => setStartVal2(e.target.value)}
+                step={getFieldStep(startPair[1])}
+                placeholder="—"
+                className={inputClass}
+              />
+            </div>
+          </div>
+        </>
+      )}
 
       {/* --- Sensible heating / cooling parameters --- */}
       {isSensible && (
@@ -770,6 +833,56 @@ export default function ProcessBuilder() {
         </div>
       )}
 
+      {/* --- Chemical dehumidification parameters --- */}
+      {processType === "chemical_dehumidification" && (
+        <>
+          <div>
+            <label className="block text-xs text-text-muted mb-1">Mode</label>
+            <select
+              value={dehumMode}
+              onChange={(e) => setDehumMode(e.target.value as DehumidificationMode)}
+              className={selectClass}
+            >
+              {CHEM_DEHUM_MODES.map((m) => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {dehumMode === "target_w" && (
+            <div>
+              <label className="block text-xs text-text-muted mb-1">
+                {isIP ? "Target W (lb/lb)" : "Target W (kg/kg)"}
+              </label>
+              <input
+                type="number"
+                value={targetW}
+                onChange={(e) => setTargetW(e.target.value)}
+                step={0.0001}
+                placeholder="—"
+                className={inputClass}
+              />
+            </div>
+          )}
+
+          {dehumMode === "target_rh" && (
+            <div>
+              <label className="block text-xs text-text-muted mb-1">Target RH (%)</label>
+              <input
+                type="number"
+                value={targetRH}
+                onChange={(e) => setTargetRH(e.target.value)}
+                min={0}
+                max={100}
+                step={1}
+                placeholder="—"
+                className={inputClass}
+              />
+            </div>
+          )}
+        </>
+      )}
+
       {/* Error */}
       {error && (
         <div className="text-xs text-red-400 bg-red-400/10 rounded px-2 py-1.5">
@@ -780,7 +893,7 @@ export default function ProcessBuilder() {
       {/* Submit */}
       <button
         type="submit"
-        disabled={loading || !startVal1 || !startVal2}
+        disabled={loading || (!chainFromPrevious && (!startVal1 || !startVal2))}
         className="w-full py-1.5 bg-accent hover:bg-accent-hover text-white text-sm font-medium
                    rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
       >
