@@ -42,11 +42,24 @@ function PropertyRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+/** Check if two processes are chained (end of prev ≈ start of next). */
+function isChained(prev: ProcessOutput, next: ProcessOutput): boolean {
+  const tol = 0.15; // tolerance for floating point comparison
+  return (
+    Math.abs(prev.end_point.Tdb - next.start_point.Tdb) < tol &&
+    Math.abs(prev.end_point.W - next.start_point.W) < tol * 0.001
+  );
+}
+
 function ProcessCard({
   proc,
+  index,
+  chainedFromPrev,
   onRemove,
 }: {
   proc: ProcessOutput;
+  index: number;
+  chainedFromPrev: boolean;
   onRemove: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -60,6 +73,12 @@ function ProcessCard({
 
   return (
     <div className="border border-border rounded bg-bg-primary">
+      {/* Chain indicator */}
+      {chainedFromPrev && (
+        <div className="flex items-center justify-center -mb-1">
+          <div className="w-px h-2 bg-text-muted/40" />
+        </div>
+      )}
       {/* Header */}
       <div
         className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-bg-tertiary/50 transition-colors"
@@ -69,6 +88,9 @@ function ProcessCard({
           className="w-2.5 h-2.5 rounded-full flex-shrink-0"
           style={{ backgroundColor: color }}
         />
+        <span className="text-xs text-text-muted font-mono flex-shrink-0">
+          {index + 1}.
+        </span>
         <span className="text-sm text-text-primary font-medium flex-1 truncate">
           {label}
         </span>
@@ -493,11 +515,13 @@ export default function ProcessList() {
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-1">
       {processes.map((proc, i) => (
         <ProcessCard
           key={`${proc.process_type}-${i}`}
           proc={proc}
+          index={i}
+          chainedFromPrev={i > 0 && isChained(processes[i - 1], proc)}
           onRemove={() => removeProcess(i)}
         />
       ))}

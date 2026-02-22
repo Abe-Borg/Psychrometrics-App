@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useStore } from "../../store/useStore";
 import { calculateProcess } from "../../api/client";
+import { fmt } from "../../utils/formatting";
 import type { ProcessType, SensibleMode, CoolingDehumMode, HumidificationMode, DehumidificationMode } from "../../types/psychro";
 
 const PROCESS_TYPES: { value: ProcessType; label: string }[] = [
@@ -82,11 +83,14 @@ const inputClass =
   "w-full px-2 py-1.5 bg-bg-tertiary border border-border rounded text-sm text-text-primary focus:outline-none focus:border-accent";
 
 export default function ProcessBuilder() {
-  const { unitSystem, pressure, addProcess } = useStore();
+  const { unitSystem, pressure, addProcess, processes } = useStore();
   const isIP = unitSystem === "IP";
 
   // Process type
   const [processType, setProcessType] = useState<ProcessType>("sensible_heating");
+
+  // Chain from previous
+  const [chainFromPrevious, setChainFromPrevious] = useState(false);
 
   // Start point
   const [startPairIndex, setStartPairIndex] = useState(0);
@@ -162,22 +166,37 @@ export default function ProcessBuilder() {
     setError(null);
   }
 
+  // Derive chained start point from the last process's end point
+  const lastProcess = processes.length > 0 ? processes[processes.length - 1] : null;
+  const canChain = lastProcess !== null;
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    const sv1 = parseFloat(startVal1);
-    const sv2 = parseFloat(startVal2);
-    if (isNaN(sv1) || isNaN(sv2)) {
-      setError("Enter valid numbers for the start point");
-      return;
+    let startPointPair: [string, string];
+    let startPointValues: [number, number];
+
+    if (chainFromPrevious && lastProcess) {
+      // Use end point Tdb + RH from previous process as start
+      startPointPair = ["Tdb", "RH"];
+      startPointValues = [lastProcess.end_point.Tdb, lastProcess.end_point.RH];
+    } else {
+      const sv1 = parseFloat(startVal1);
+      const sv2 = parseFloat(startVal2);
+      if (isNaN(sv1) || isNaN(sv2)) {
+        setError("Enter valid numbers for the start point");
+        return;
+      }
+      startPointPair = startPair;
+      startPointValues = [sv1, sv2];
     }
 
     const input: Parameters<typeof calculateProcess>[0] = {
       process_type: processType,
       unit_system: unitSystem,
       pressure,
-      start_point_pair: startPair,
-      start_point_values: [sv1, sv2],
+      start_point_pair: startPointPair,
+      start_point_values: startPointValues,
     };
 
     // Process-specific fields
@@ -320,50 +339,72 @@ export default function ProcessBuilder() {
         </select>
       </div>
 
-      {/* Start point */}
-      <div>
-        <label className="block text-xs text-text-muted mb-1">Start Point</label>
-        <select
-          value={startPairIndex}
-          onChange={(e) => {
-            setStartPairIndex(parseInt(e.target.value));
-            setStartVal1("");
-            setStartVal2("");
-            setError(null);
-          }}
-          className={selectClass}
-        >
-          {INPUT_PAIRS.map((p, i) => (
-            <option key={i} value={i}>
-              {p.label}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <label className="block text-xs text-text-muted mb-1">{startLabel1}</label>
+      {/* Chain from previous toggle */}
+      {canChain && (
+        <label className="flex items-center gap-2 cursor-pointer">
           <input
-            type="number"
-            value={startVal1}
-            onChange={(e) => setStartVal1(e.target.value)}
-            step={getFieldStep(startPair[0])}
-            placeholder="—"
-            className={inputClass}
+            type="checkbox"
+            checked={chainFromPrevious}
+            onChange={(e) => setChainFromPrevious(e.target.checked)}
+            className="accent-accent cursor-pointer"
           />
-        </div>
-        <div>
-          <label className="block text-xs text-text-muted mb-1">{startLabel2}</label>
-          <input
-            type="number"
-            value={startVal2}
-            onChange={(e) => setStartVal2(e.target.value)}
-            step={getFieldStep(startPair[1])}
-            placeholder="—"
-            className={inputClass}
-          />
-        </div>
-      </div>
+          <span className="text-xs text-text-muted">
+            Chain from Process {processes.length} end point
+            <span className="text-text-primary font-mono ml-1">
+              ({fmt(lastProcess!.end_point.Tdb, 1)}°, {fmt(lastProcess!.end_point.RH, 1)}% RH)
+            </span>
+          </span>
+        </label>
+      )}
+
+      {/* Start point (hidden when chaining) */}
+      {!chainFromPrevious && (
+        <>
+          <div>
+            <label className="block text-xs text-text-muted mb-1">Start Point</label>
+            <select
+              value={startPairIndex}
+              onChange={(e) => {
+                setStartPairIndex(parseInt(e.target.value));
+                setStartVal1("");
+                setStartVal2("");
+                setError(null);
+              }}
+              className={selectClass}
+            >
+              {INPUT_PAIRS.map((p, i) => (
+                <option key={i} value={i}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-xs text-text-muted mb-1">{startLabel1}</label>
+              <input
+                type="number"
+                value={startVal1}
+                onChange={(e) => setStartVal1(e.target.value)}
+                step={getFieldStep(startPair[0])}
+                placeholder="—"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-text-muted mb-1">{startLabel2}</label>
+              <input
+                type="number"
+                value={startVal2}
+                onChange={(e) => setStartVal2(e.target.value)}
+                step={getFieldStep(startPair[1])}
+                placeholder="—"
+                className={inputClass}
+              />
+            </div>
+          </div>
+        </>
+      )}
 
       {/* --- Sensible heating / cooling parameters --- */}
       {isSensible && (
@@ -852,7 +893,7 @@ export default function ProcessBuilder() {
       {/* Submit */}
       <button
         type="submit"
-        disabled={loading || !startVal1 || !startVal2}
+        disabled={loading || (!chainFromPrevious && (!startVal1 || !startVal2))}
         className="w-full py-1.5 bg-accent hover:bg-accent-hover text-white text-sm font-medium
                    rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
       >
