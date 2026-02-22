@@ -657,10 +657,8 @@ The app is polished and production-usable.
 | 7.1 | ASHRAE design day conditions overlay (by city/CZ) |
 | 7.2 | TMY bin data scatter/heatmap overlay |
 | 7.3 | AHU wizard mode (guided workflow) |
-| 7.4 | Multi-project comparison (overlay two projects) |
 | 7.5 | Electron/Tauri native Windows wrapper |
 | 7.6 | PDF report generation |
-| 7.7 | CoolProp integration (refrigerant properties) |
 
 ---
 
