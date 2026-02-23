@@ -1,7 +1,7 @@
 """
-TMY3 data parser and bin processor.
+Weather data parser and bin processor.
 
-Parses Typical Meteorological Year CSV files (TMY3 format from NREL),
+Parses TMY3 CSV files (NREL format) and EPW files (EnergyPlus Weather format),
 extracts hourly Tdb and humidity data, computes psychrometric properties,
 and bins data into a 2D grid for heatmap visualization.
 """
@@ -158,6 +158,141 @@ def parse_tmy3(
         "location_name": location_name,
         "total_hours": len(scatter_points),
     }
+
+
+def parse_epw(
+    file_content: str,
+    unit_system: UnitSystem,
+    pressure: float,
+    tdb_bin_size: float = 5.0,
+    w_bin_size: Optional[float] = None,
+) -> dict:
+    """
+    Parse an EPW (EnergyPlus Weather) file and return scatter points + binned heatmap data.
+
+    EPW format:
+    - Lines 1-8: Header records (LOCATION, DESIGN CONDITIONS, etc.)
+    - Lines 9+: Hourly weather data (8760 rows for a full year)
+
+    Each data row is CSV with fields:
+        0: Year, 1: Month, 2: Day, 3: Hour (1-24), 4: Minute,
+        5: Data Source, 6: Dry Bulb Temp (C), 7: Dew Point Temp (C),
+        8: Relative Humidity (%), 9: Atmospheric Pressure (Pa), ...
+
+    Args:
+        file_content: Raw EPW file text
+        unit_system: "IP" or "SI"
+        pressure: Atmospheric pressure (fallback; EPW rows include pressure)
+        tdb_bin_size: Bin size for Tdb axis (default 5)
+        w_bin_size: Bin size for W axis (default auto-computed)
+
+    Returns:
+        dict matching TMYProcessOutput schema
+    """
+    lines = file_content.strip().splitlines()
+    if len(lines) < 10:
+        raise ValueError("File too short to be a valid EPW file.")
+
+    location_name = _extract_epw_location(lines[0])
+
+    # EPW data rows start at line index 8 (after 8 header lines)
+    DATA_START = 8
+
+    psychrolib.SetUnitSystem(psychrolib.SI)
+
+    if unit_system == "IP":
+        w_factor = 7000.0  # grains/lb
+    else:
+        w_factor = 1000.0  # g/kg
+
+    scatter_points = []
+    hour = 0
+
+    for line_idx in range(DATA_START, len(lines)):
+        line = lines[line_idx].strip()
+        if not line:
+            continue
+
+        try:
+            reader = csv.reader(io.StringIO(line))
+            row = next(reader)
+
+            if len(row) < 10:
+                continue
+
+            month = int(row[1])
+            tdb_c = float(row[6])
+            tdp_c = float(row[7])
+            atm_pressure_pa = float(row[9])
+
+            # Skip EPW missing-value sentinels
+            if tdb_c > 70 or tdb_c < -70:
+                continue
+            if tdp_c > 70 or tdp_c < -70:
+                continue
+
+            # Use row-level atmospheric pressure if valid, else fall back
+            if 50000 <= atm_pressure_pa <= 120000:
+                pressure_si = atm_pressure_pa
+            elif unit_system == "IP":
+                pressure_si = pressure * 6894.76
+            else:
+                pressure_si = pressure
+
+            W = psychrolib.GetHumRatioFromTDewPoint(tdp_c, pressure_si)
+
+            if unit_system == "IP":
+                tdb_display = tdb_c * 9.0 / 5.0 + 32.0
+            else:
+                tdb_display = tdb_c
+
+            W_display = W * w_factor
+
+            scatter_points.append({
+                "Tdb": round(tdb_display, 2),
+                "W_display": round(W_display, 2),
+                "hour": hour,
+                "month": month,
+            })
+            hour += 1
+        except (ValueError, IndexError):
+            continue
+
+    if len(scatter_points) == 0:
+        raise ValueError("No valid data points found in EPW file.")
+
+    if w_bin_size is None:
+        w_bin_size = 10.0 if unit_system == "IP" else 2.0
+
+    bin_result = _bin_data(scatter_points, tdb_bin_size, w_bin_size)
+
+    return {
+        "unit_system": unit_system,
+        "scatter_points": scatter_points,
+        "bin_Tdb_edges": bin_result["tdb_edges"],
+        "bin_W_edges": bin_result["w_edges"],
+        "bin_matrix": bin_result["matrix"],
+        "location_name": location_name,
+        "total_hours": len(scatter_points),
+    }
+
+
+def _extract_epw_location(first_line: str) -> Optional[str]:
+    """Extract location name from EPW LOCATION header line.
+
+    Format: LOCATION,City,State/Province,Country,Source,WMO,Lat,Lon,TZ,Elev
+    """
+    try:
+        parts = first_line.split(",")
+        if len(parts) >= 4 and parts[0].strip().upper() == "LOCATION":
+            city = parts[1].strip()
+            state = parts[2].strip()
+            country = parts[3].strip()
+            components = [p for p in [city, state, country] if p and p != "-"]
+            return ", ".join(components) if components else None
+    except Exception:
+        pass
+    return None
 
 
 def _extract_location_name(first_line: str) -> Optional[str]:

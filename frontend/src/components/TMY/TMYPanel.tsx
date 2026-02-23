@@ -50,7 +50,7 @@ export default function TMYPanel() {
         <input
           ref={fileInputRef}
           type="file"
-          accept=".csv"
+          accept=".csv,.epw"
           onChange={handleFileSelect}
           className="hidden"
           id="tmy-upload"
@@ -61,7 +61,7 @@ export default function TMYPanel() {
                      border-border text-text-secondary hover:text-text-primary hover:border-accent
                      cursor-pointer transition-colors ${tmyLoading ? "opacity-50 pointer-events-none" : ""}`}
         >
-          {tmyLoading ? "Processing..." : "Upload TMY3 CSV"}
+          {tmyLoading ? "Processing..." : "Upload Weather File (CSV / EPW)"}
         </label>
       </div>
 
