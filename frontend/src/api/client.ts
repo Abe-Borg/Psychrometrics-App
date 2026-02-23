@@ -1,4 +1,4 @@
-import type { ChartData, StatePointInput, StatePointOutput, ProcessInput, ProcessOutput, CoilInput, CoilOutput, SHRLineInput, SHRLineOutput, GSHRInput, GSHROutput, AirflowCalcInput, AirflowCalcOutput, CondensationCheckInput, CondensationCheckOutput, UnitSystem, DesignDaySearchResult, DesignDayResolveInput, DesignDayResolveOutput, TMYProcessOutput, AHUWizardInput, AHUWizardOutput } from "../types/psychro";
+import type { ChartData, StatePointInput, StatePointOutput, ProcessInput, ProcessOutput, CoilInput, CoilOutput, SHRLineInput, SHRLineOutput, GSHRInput, GSHROutput, AirflowCalcInput, AirflowCalcOutput, CondensationCheckInput, CondensationCheckOutput, UnitSystem, DesignDaySearchResult, DesignDayResolveInput, DesignDayResolveOutput, TMYProcessOutput, AHUWizardInput, AHUWizardOutput, WeatherAnalysisOutput } from "../types/psychro";
 
 const BASE_URL = "/api/v1";
 
@@ -129,6 +129,30 @@ export async function uploadTMYFile(
     throw new Error(`API error (${res.status}): ${detail}`);
   }
   return res.json() as Promise<TMYProcessOutput>;
+}
+
+// --- Weather Analysis ---
+
+export async function analyzeWeatherFile(
+  file: File,
+  unitSystem: UnitSystem,
+  nClusters: number = 5
+): Promise<WeatherAnalysisOutput> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const params = new URLSearchParams({
+    unit_system: unitSystem,
+    n_clusters: nClusters.toString(),
+  });
+  const res = await fetch(`${BASE_URL}/weather/analyze?${params}`, {
+    method: "POST",
+    body: formData,
+  });
+  if (!res.ok) {
+    const detail = await res.text();
+    throw new Error(`API error (${res.status}): ${detail}`);
+  }
+  return res.json() as Promise<WeatherAnalysisOutput>;
 }
 
 // --- AHU Wizard ---

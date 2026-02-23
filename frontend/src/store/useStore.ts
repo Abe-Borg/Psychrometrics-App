@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { UnitSystem, ChartData, StatePointOutput, ProcessOutput, CoilOutput, SHRLineOutput, GSHROutput, AirflowCalcOutput, CondensationCheckOutput, DesignDayResolveOutput, TMYProcessOutput, AHUWizardOutput } from "../types/psychro";
+import type { UnitSystem, ChartData, StatePointOutput, ProcessOutput, CoilOutput, SHRLineOutput, GSHROutput, AirflowCalcOutput, CondensationCheckOutput, DesignDayResolveOutput, TMYProcessOutput, AHUWizardOutput, WeatherAnalysisOutput } from "../types/psychro";
 import type { ProjectFile } from "../types/project";
 
 // Snapshot of undoable state
@@ -126,6 +126,15 @@ interface AppState {
   clearTMYResult: () => void;
   setTMYDisplayMode: (mode: "scatter" | "heatmap") => void;
   setTMYLoading: (loading: boolean) => void;
+
+  // --- Weather Analysis ---
+  weatherAnalysis: WeatherAnalysisOutput | null;
+  weatherAnalysisLoading: boolean;
+
+  // Actions — Weather Analysis
+  setWeatherAnalysis: (result: WeatherAnalysisOutput | null) => void;
+  clearWeatherAnalysis: () => void;
+  setWeatherAnalysisLoading: (loading: boolean) => void;
 
   // --- Phase 7: AHU Wizard ---
   ahuWizardResult: AHUWizardOutput | null;
@@ -385,6 +394,14 @@ export const useStore = create<AppState>((set, get) => ({
   setTMYDisplayMode: (mode) => set({ tmyDisplayMode: mode }),
   setTMYLoading: (loading) => set({ tmyLoading: loading }),
 
+  // --- Weather Analysis ---
+  weatherAnalysis: null,
+  weatherAnalysisLoading: false,
+
+  setWeatherAnalysis: (result) => set({ weatherAnalysis: result }),
+  clearWeatherAnalysis: () => set({ weatherAnalysis: null }),
+  setWeatherAnalysisLoading: (loading) => set({ weatherAnalysisLoading: loading }),
+
   // --- Phase 7: AHU Wizard ---
   ahuWizardResult: null,
   ahuWizardLoading: false,
@@ -475,6 +492,7 @@ export const useStore = create<AppState>((set, get) => ({
       condensationResult: null,
       designDayResult: null,
       tmyResult: null,
+      weatherAnalysis: null,
       ahuWizardResult: null,
       selectedPointIndex: null,
       _history: [...state._history, snapshot].slice(-MAX_HISTORY),
