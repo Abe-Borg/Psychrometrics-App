@@ -1,693 +1,765 @@
-# PsychroApp — Implementation Plan (Chunked)
+# PsychroApp — Weather Data Analysis & Design Condition Extraction
 
-Each chunk is a self-contained unit of work that results in something testable and runnable. Chunks are ordered by dependency — each one builds on the last.
-
----
-
-## PHASE 1: Foundation (State Points + Base Chart) ✅ COMPLETE
-
-### Chunk 1.1 — Backend Scaffolding + State Point Engine ✅
-
-**Goal:** A running FastAPI server that can resolve any state point from a valid input pair.
-
-**What was built:**
-- FastAPI project with virtual environment, psychrolib, pydantic, scipy, numpy
-- `config.py` with UnitSystem enum, constants, chart ranges, supported input pairs
-- Pydantic models: `StatePointInput`, `StatePointOutput` (11 resolved properties)
-- `state_resolver.py` with 7 input pairs (Tdb+RH, Tdb+Twb, Tdb+Tdp, Tdb+W, Tdb+h, Twb+RH, Tdp+RH)
-- Iterative solvers using scipy.optimize.brentq for pairs psychrolib can't handle directly
-- Dispatch table with automatic reverse-order pair handling
-- `POST /api/v1/state-point` and `GET /api/v1/pressure-from-altitude` endpoints
-- 50 passing tests validating against ASHRAE reference data
+## Implementation Plan
 
 ---
 
-### Chunk 1.2 — Chart Background Data Generator ✅
+## 1. Purpose and Context
 
-**Goal:** An endpoint that returns all the data needed to draw the psychrometric chart background.
+### 1.1 What This Feature Does
 
-**What was built:**
-- `chart_generator.py` with generators for: saturation curve (200 pts), 9 RH lines (10%-90%), 12 Twb lines, 10 enthalpy lines, 6 specific volume lines
-- All generators use numpy.linspace for sweeps, psychrolib for calculations
-- Automatic altitude/pressure adjustment
-- `GET /api/v1/chart-data` endpoint returning all line sets as JSON
-- 29 passing tests (saturation accuracy, RH ordering, physics validation, SI support, Denver altitude case)
+This feature allows an HVAC mechanical designer to upload a TMY3/EPW weather data file for a specific geographic location, and have the software automatically extract a small set of **design condition points** (typically 5–8 points) that collectively represent the full range of outdoor conditions the designer's HVAC system must handle across an entire year.
 
----
+### 1.2 Why This Matters
 
-### Chunk 1.3 — Frontend Scaffolding + Base Chart Rendering ✅
+Today, most mechanical designers size HVAC systems using one or two "peak" design conditions published by ASHRAE (e.g., the 0.4% cooling design temperature). This approach catches the extremes but misses problematic intermediate conditions — for example, a moderately warm but very humid day where the system barely runs in cooling mode but needs to actively dehumidify. Systems designed only for peak conditions can fail to maintain comfort or code-required conditions during these intermediate periods.
 
-**Goal:** A React app that fetches chart data and renders an interactive psychrometric chart.
+This feature solves that by analyzing all 8,760 hours of weather data in a year and extracting:
 
-**What was built:**
-- Vite + React + TypeScript + Tailwind CSS v4 + Plotly.js + Zustand
-- `api/client.ts` with fetch wrappers for all backend endpoints
-- TypeScript interfaces mirroring backend models
-- `PsychroChart.tsx`: all background lines rendered with color-coding (red saturation, blue RH, green Twb, yellow enthalpy, purple volume)
-- Dark theme with custom CSS variables
-- Zoom, pan, scroll-zoom enabled
-- `AppLayout.tsx` (toolbar + chart + sidebar), `Toolbar.tsx` (unit toggle, altitude, pressure), `Sidebar.tsx`
-- Zustand store managing unitSystem, pressure, altitude, chartData, statePoints
-- Vite dev server with API proxy to backend
+- **Extreme design points** — the peak cooling, peak heating, and peak dehumidification conditions
+- **Intermediate cluster points** — representative conditions for the major "operating regimes" the system will spend most of the year in
 
----
+The designer can then check their proposed system against each of these points (manually or with future tooling) and be confident the system works year-round — not just on the single hottest or coldest day.
 
-### Chunk 1.4 — State Point UI (Input, Display, Plot) ✅
+### 1.3 What the Output Looks Like (Conceptually)
 
-**Goal:** User can define state points via a form, see them plotted on the chart, and view full properties.
+After processing a weather file, the user sees:
 
-**What was built:**
-- `StatePointForm.tsx`: dropdown for 7 input pair types, two numeric inputs with dynamic labels/units, optional label, validation, calls backend API
-- `StatePointList.tsx`: expandable cards showing all 11 properties, color-coded dots matching chart markers, delete/clear-all
-- State points plotted as colored markers with labels on chart
-- Hover over markers shows full property tooltips
-- 8-color cycle for multiple points
+1. **A psychrometric chart** with all 8,760 hourly data points plotted, color-coded by cluster membership
+2. **Highlighted design points** — larger, distinctly styled markers for each extracted design condition
+3. **A summary table** listing each design point with its full psychrometric properties (dry-bulb, wet-bulb, dewpoint, humidity ratio, enthalpy, relative humidity, specific volume)
+4. **Cluster metadata** — how many hours fall in each cluster (tells the designer what fraction of the year the system operates in that regime)
+
+Example output for an inland Southern California location:
+
+| Point | Type | DB (°F) | WB (°F) | DP (°F) | ω (gr/lb) | h (BTU/lb) | Hours |
+|-------|------|---------|---------|---------|-----------|------------|-------|
+| 1 | Peak Cooling | 104.2 | 71.1 | 58.3 | 73.2 | 37.8 | — |
+| 2 | Peak Heating | 33.8 | 32.1 | 29.5 | 25.8 | 11.2 | — |
+| 3 | Peak Dehum. | 76.5 | 67.2 | 63.1 | 92.4 | 31.5 | — |
+| 4 | Cluster A (warm dry) | 88.3 | 64.2 | 49.7 | 54.1 | 32.1 | 1,740 |
+| 5 | Cluster B (mild) | 71.8 | 58.4 | 49.2 | 53.5 | 25.8 | 2,350 |
+| 6 | Cluster C (cool) | 53.1 | 47.8 | 42.1 | 37.8 | 18.2 | 1,680 |
+| 7 | Cluster D (warm humid) | 78.4 | 65.1 | 59.8 | 80.3 | 30.4 | 890 |
 
 ---
 
-### Chunk 1.5 — Hover Tooltip (Live Properties at Cursor) ✅
+## 2. Architecture Overview
 
-**Goal:** Real-time psychrometric properties displayed at cursor position.
+### 2.1 Module Structure
 
-**What was built:**
-- Installed `psychrolib` npm package (JS port) for client-side calculations
-- `hoverCalc.ts`: `calcPropertiesAtCursor()` using psychrolib.js — no API round-trip
-- `psychrolib.d.ts`: TypeScript declarations for the JS module
-- Invisible scatter mesh trace (sampled from RH lines + saturation curve) for hover detection
-- Floating tooltip overlay positioned near cursor showing 7 properties in 2-column grid
-- Returns null if cursor is above saturation curve (invalid region)
+This feature is composed of four distinct modules, each with a clear responsibility:
 
----
-
-**PHASE 1 COMPLETE — 79 passing tests, full interactive chart with state points and live tooltips**
-
----
-
-## PHASE 2: Core Processes ← START HERE
-
-### Chunk 2.1 — Process Solver Framework + Sensible Heating/Cooling
-
-**Goal:** Establish the process solver pattern and implement the simplest process type.
-
-#### Data Models
-
-New file: `backend/app/models/process.py`
-
-```python
-from enum import Enum
-from pydantic import BaseModel, Field
-from typing import Optional
-from app.config import UnitSystem, DEFAULT_PRESSURE_IP
-
-class ProcessType(str, Enum):
-    SENSIBLE_HEATING = "sensible_heating"
-    SENSIBLE_COOLING = "sensible_cooling"
-    COOLING_DEHUMIDIFICATION = "cooling_dehumidification"
-
-class SensibleMode(str, Enum):
-    TARGET_TDB = "target_tdb"        # User provides target dry-bulb temperature
-    DELTA_T = "delta_t"              # User provides temperature change
-    HEAT_AND_AIRFLOW = "heat_and_airflow"  # User provides Q (BTU/hr or W) + CFM (or m³/s)
-
-class ProcessInput(BaseModel):
-    """Input for a psychrometric process calculation."""
-    process_type: ProcessType
-    unit_system: UnitSystem = UnitSystem.IP
-    pressure: float = DEFAULT_PRESSURE_IP
-
-    # Start state: resolved from an input pair (reuses existing resolver)
-    start_point_pair: tuple[str, str]
-    start_point_values: tuple[float, float]
-
-    # Process parameters — which fields are used depends on process_type
-    # Sensible heating/cooling:
-    sensible_mode: Optional[SensibleMode] = None
-    target_Tdb: Optional[float] = None        # for TARGET_TDB mode
-    delta_T: Optional[float] = None            # for DELTA_T mode (positive = heating, negative = cooling)
-    Q_sensible: Optional[float] = None         # BTU/hr (IP) or W (SI) — for HEAT_AND_AIRFLOW mode
-    airflow_cfm: Optional[float] = None        # CFM (IP) or m³/s (SI)
-
-    # Cooling & dehumidification (Chunk 2.2):
-    adp_Tdb: Optional[float] = None            # ADP dry-bulb (forward mode)
-    bypass_factor: Optional[float] = None      # Bypass factor 0-1 (forward mode)
-    leaving_Tdb: Optional[float] = None        # Leaving conditions (reverse mode)
-    leaving_RH: Optional[float] = None         # Leaving RH % (reverse mode)
-
-class PathPoint(BaseModel):
-    """A point along a process path for chart rendering."""
-    Tdb: float
-    W: float
-    W_display: float
-
-class ProcessOutput(BaseModel):
-    """Result of a process calculation."""
-    process_type: ProcessType
-    unit_system: UnitSystem
-    pressure: float
-
-    start_point: dict    # Full StatePointOutput as dict
-    end_point: dict      # Full StatePointOutput as dict
-    path_points: list[PathPoint]
-
-    # Process metadata (content depends on process_type)
-    metadata: dict = Field(default_factory=dict)
-    # Sensible: {Qs, delta_T, cfm (if provided)}
-    # Cooling/dehum: {ADP_Tdb, ADP_W, BF, CF, Qs, Ql, Qt, SHR}
-
-    warnings: list[str] = Field(default_factory=list)
+```
+weather_analysis/
+├── __init__.py
+├── epw_parser.py          # Reads and validates EPW files
+├── psychrometric_calc.py  # Computes full psychrometric state from partial inputs
+├── clustering.py          # Performs k-means clustering and extracts design points
+└── design_extractor.py    # Orchestrates the full pipeline: parse → compute → cluster → extract
 ```
 
-#### Process Solver Base
+Additionally, there will be:
 
-New file: `backend/app/engine/processes/base.py`
+- **Backend API endpoints** to accept file uploads and return results
+- **Frontend components** to handle file upload, display the chart overlay, and show the summary table
 
-```python
-from abc import ABC, abstractmethod
-from app.models.process import ProcessInput, ProcessOutput
+### 2.2 Data Flow
 
-class ProcessSolver(ABC):
-    @abstractmethod
-    def solve(self, input: ProcessInput) -> ProcessOutput:
-        """Solve the process and return the result."""
-        ...
+```
+EPW File (uploaded by user)
+    │
+    ▼
+epw_parser.py
+    │  Extracts hourly records: dry-bulb, dewpoint, atmospheric pressure,
+    │  plus metadata (location name, latitude, longitude, elevation, timezone)
+    │
+    ▼
+psychrometric_calc.py
+    │  For each hourly record, computes the full psychrometric state:
+    │  DB, WB, DP, humidity ratio, enthalpy, RH, specific volume
+    │
+    ▼
+clustering.py
+    │  Takes the 8,760 fully-resolved psychrometric states
+    │  Runs k-means clustering on (DB, humidity ratio) axes
+    │  Returns cluster assignments, centroids, and per-cluster metadata
+    │
+    ▼
+design_extractor.py
+    │  Extracts extreme design points (peak cooling, heating, dehumidification)
+    │  Extracts representative and worst-case points from each cluster
+    │  Packages everything into a structured result object
+    │
+    ▼
+API Response → Frontend
+    │  All 8,760 points with cluster labels (for chart plotting)
+    │  Design points with full psychrometric properties (for table and chart highlights)
+    │  Cluster metadata: hour counts, centroid values
 ```
 
-#### Sensible Heating/Cooling Solver
+### 2.3 Technology Choices
 
-New file: `backend/app/engine/processes/sensible.py`
-
-Sensible heating/cooling is a horizontal line on the psychrometric chart (constant W). Three input modes:
-
-1. **TARGET_TDB**: Given start state + target dry-bulb → end state at same W, new Tdb
-2. **DELTA_T**: Given start state + ΔT → end state at Tdb + ΔT, same W
-3. **HEAT_AND_AIRFLOW**: Given start state + Q (BTU/hr) + CFM → compute ΔT = Q / (C × CFM), then same as DELTA_T
-   - C = 1.08 (IP, at sea level) or derived from ρ × cp at actual conditions
-   - Altitude correction: C = 60 × ρ × cp where ρ = 1/v
-
-**Edge case: Sensible cooling crosses dew point.** If the target Tdb < start Tdp, the process would cross the dew point, meaning dehumidification would occur in practice. The solver should:
-- Complete the calculation as requested (return the state at target Tdb, same W)
-- Add a warning to `ProcessOutput.warnings`: "Target Tdb ({target}) is below the dew point ({Tdp}). In practice, dehumidification would occur. Consider using a cooling & dehumidification process."
-
-**Path:** `[start_point, end_point]` — just two points (horizontal line).
-
-**Metadata:** `{Qs: float, delta_T: float, cfm: float | null}`
-
-#### API Route
-
-New file: `backend/app/api/process.py`
-
-- `POST /api/v1/process` — dispatches to correct solver based on `process_type`
-- Register in `router.py`
-
-#### Tasks
-- [ ] Create `backend/app/models/process.py` with ProcessType, ProcessInput, ProcessOutput
-- [ ] Create `backend/app/engine/processes/base.py` with abstract solver
-- [ ] Create `backend/app/engine/processes/sensible.py` with SensibleSolver
-- [ ] Create `backend/app/api/process.py` with POST /api/v1/process
-- [ ] Register process router in `backend/app/api/router.py`
-- [ ] Write tests: `backend/tests/test_sensible_process.py`
-  - Sensible heating from 55°F to 75°F at known W, verify Qs
-  - Sensible cooling from 75°F to 55°F, verify same magnitude
-  - DELTA_T mode: +20°F from 55°F → 75°F
-  - HEAT_AND_AIRFLOW mode: known Q + CFM → verify ΔT and end state
-  - Edge case: cooling below dew point triggers warning
-  - SI unit test
-
-**Verification:** POST a sensible heating process, get back correct end state and energy.
+| Component | Technology | Rationale |
+|-----------|-----------|-----------|
+| Psychrometric calculations | **psychrolib** (Python) | Industry-standard library implementing ASHRAE psychrometric formulas. Already used in the existing PsychroApp backend. |
+| Clustering | **scikit-learn KMeans** | Well-tested, fast, and appropriate for this use case. pip install scikit-learn. |
+| Numerical operations | **NumPy** | Required by scikit-learn anyway; useful for percentile calculations and array operations. |
+| Backend framework | **FastAPI** | Already used by PsychroApp. |
+| Frontend charting | **Plotly.js** | Already used by PsychroApp for the psychrometric chart. Weather data will be added as additional traces. |
 
 ---
 
-### Chunk 2.2 — Cooling & Dehumidification Solver
+## 3. Module Specifications
 
-**Goal:** The most important HVAC process — cooling air below its dew point through a coil.
+### 3.1 EPW Parser (`epw_parser.py`)
 
-#### Two Modes
+#### 3.1.1 EPW File Format
 
-**Forward mode (ADP + BF → leaving state):**
-- Input: start state + ADP dry-bulb temperature + bypass factor (0 < BF < 1)
-- Resolve ADP as a saturation state: `resolve_state_point(("Tdb", "RH"), (adp_Tdb, 100), pressure, unit_system)`
-- Leaving Tdb = ADP_Tdb + BF × (entering_Tdb - ADP_Tdb)
-- Leaving W = ADP_W + BF × (entering_W - ADP_W)
-- Resolve leaving state from Tdb + W
-- CF (contact factor) = 1 - BF
+An EPW (EnergyPlus Weather) file is a text file with the following structure:
 
-**Reverse mode (entering + leaving → ADP + BF):**
-- Input: start state + leaving Tdb + leaving RH (or leaving Twb)
-- Resolve leaving state
-- ADP = intersection of the line through (entering, leaving) with the saturation curve
-  - The process line in Tdb-W space is: W = W_entering + slope × (Tdb - Tdb_entering), where slope = (W_leaving - W_entering) / (Tdb_leaving - Tdb_entering)
-  - Find Tdb_adp where `W_sat(Tdb) == W_line(Tdb)` using brentq
-  - Search domain: Tdb from the saturation curve minimum up to the leaving Tdb
-- BF = (leaving_Tdb - ADP_Tdb) / (entering_Tdb - ADP_Tdb)
+- **Lines 1–8**: Header lines containing metadata. Each header line starts with a keyword, and fields are comma-separated.
+  - Line 1 starts with `LOCATION` and contains: city name, state/province, country, data source, WMO station number, latitude, longitude, timezone offset (hours from GMT), and elevation (meters).
+  - Lines 2–8 contain other metadata (design conditions, typical periods, ground temperatures, etc.) that we can skip for this implementation.
+- **Lines 9 onward**: One line per hour, 8,760 lines total (non-leap year), comma-separated values.
 
-**ADP finder implementation:**
+The relevant columns in the hourly data rows (0-indexed) are:
+
+| Column Index | Field | Units in EPW |
+|-------------|-------|-------------|
+| 0 | Year | integer |
+| 1 | Month | 1–12 |
+| 2 | Day | 1–31 |
+| 3 | Hour | 1–24 (hour ending; hour 1 = 00:00–01:00) |
+| 6 | Dry-bulb temperature | °C |
+| 7 | Dewpoint temperature | °C |
+| 8 | Relative humidity | % (0–100) |
+| 9 | Atmospheric pressure | Pa |
+
+**Important**: EPW files store temperatures in Celsius and pressure in Pascals, regardless of the building location. The parser must handle unit conversions downstream or flag the raw units clearly.
+
+#### 3.1.2 Parser Requirements
+
+**Function signature:**
+
 ```python
-def find_adp(entering_Tdb, entering_W, leaving_Tdb, leaving_W, pressure, unit_system):
-    """Find the apparatus dew point (intersection of process line with saturation curve)."""
-    slope = (leaving_W - entering_W) / (leaving_Tdb - entering_Tdb)
-
-    def objective(Tdb):
-        W_on_line = entering_W + slope * (Tdb - entering_Tdb)
-        W_sat = psychrolib.GetSatHumRatio(Tdb, pressure)
-        return W_sat - W_on_line
-
-    # ADP must be at or below the leaving temperature
-    Tdb_min = <chart_min>  # from config ranges
-    Tdb_max = leaving_Tdb
-    adp_Tdb = brentq(objective, Tdb_min, Tdb_max, xtol=1e-8)
-    return adp_Tdb
+def parse_epw(file_path: str) -> EPWData:
 ```
+
+**EPWData structure** (use a dataclass or Pydantic model):
+
+```python
+@dataclass
+class EPWLocation:
+    city: str
+    state: str
+    country: str
+    latitude: float     # decimal degrees, positive = North
+    longitude: float    # decimal degrees, positive = East
+    timezone: float     # hours offset from GMT
+    elevation: float    # meters above sea level
+
+@dataclass
+class HourlyRecord:
+    year: int
+    month: int
+    day: int
+    hour: int           # 1–24
+    dry_bulb_c: float   # °C
+    dewpoint_c: float   # °C
+    rh_percent: float   # 0–100
+    pressure_pa: float  # Pascals
+
+@dataclass
+class EPWData:
+    location: EPWLocation
+    hourly_records: list[HourlyRecord]  # length should be 8,760
+```
+
+**Validation requirements:**
+
+- Verify the file has at least 8 header lines + data rows
+- Verify the first line starts with `LOCATION`
+- Verify exactly 8,760 data rows are present (warn if fewer or more)
+- Verify numeric fields are valid numbers (not missing or corrupted)
+- Handle the common case where some EPW files have 8,784 rows (leap year) — truncate to 8,760 or handle gracefully
+- Raise clear, descriptive errors if the file is malformed
 
 **Edge cases:**
-- ADP not found (process line doesn't intersect saturation curve): return error "Process line does not intersect the saturation curve. Check entering and leaving conditions."
-- BF < 0 or BF > 1: return error "Computed bypass factor is out of range (0-1). The leaving state may be beyond the ADP."
 
-**Path:** Straight line from entering to leaving (10 intermediate points for chart rendering), plus an optional dashed extension to the ADP for reference.
+- Some EPW files use `99` or `999` or `9999` as missing data indicators. Flag or handle these.
+- Atmospheric pressure may be 0 in some files; default to standard atmospheric pressure (101325 Pa) if missing.
 
-**Metadata:** `{ADP_Tdb, ADP_W, ADP_W_display, BF, CF, Qs, Ql, Qt, SHR}`
+#### 3.1.3 Notes on EPW Sources
 
-Where:
-- Qs = 1.08 × CFM × (Tdb_entering - Tdb_leaving) [IP] — if CFM not provided, report as BTU/lb via enthalpy difference
-- Ql = 0.68 × CFM × (W_entering - W_leaving) × 7000 [IP, W in lb/lb] — or from enthalpy
-- Qt = 4.5 × CFM × (h_entering - h_leaving) [IP] — or h_entering - h_leaving per lb
-- SHR = Qs / Qt
-
-#### Tasks
-- [ ] Create `backend/app/engine/processes/cooling_dehum.py`
-- [ ] Implement forward mode (ADP + BF → leaving)
-- [ ] Implement reverse mode (entering + leaving → ADP + BF)
-- [ ] Implement `find_adp()` helper
-- [ ] Add `COOLING_DEHUMIDIFICATION` dispatch to process route
-- [ ] Write tests: `backend/tests/test_cooling_dehum.py`
-  - Classic example: 80°F/67°F wb entering, 55°F/54°F wb leaving → verify ADP, BF, loads
-  - Forward mode: known ADP (45°F) + BF (0.15) → verify leaving conditions
-  - Reverse mode: same entering/leaving → verify back-calculated ADP matches
-  - Round-trip: forward then reverse with same inputs → same ADP/BF
-  - Edge case: line doesn't intersect saturation curve
-  - SI units
-
-**Verification:** Classic textbook cooling coil problem. Both modes should agree when given consistent data.
+The user will typically download EPW files from energyplus.net/weather or similar sources. The files are plain text and typically 1.5–2.5 MB in size.
 
 ---
 
-### Chunk 2.3 — Adiabatic Mixing Solver
+### 3.2 Psychrometric Calculator (`psychrometric_calc.py`)
 
-**Goal:** Calculate mixed air conditions from two (or more) airstreams.
+#### 3.2.1 Purpose
 
-#### Approach
+For each of the 8,760 hourly records, compute the **full psychrometric state** from the available inputs (dry-bulb, dewpoint, and atmospheric pressure). The outputs are the properties a mechanical designer needs for system sizing.
 
-The mixing calculation is straightforward:
-1. Convert CFM to mass flow using specific volume: `m = CFM / v` (IP: lb/min) or `m = airflow / v` (SI: kg/s)
-2. Mix by mass-weighted average:
-   - `W_mix = (m1 × W1 + m2 × W2) / (m1 + m2)`
-   - `h_mix = (m1 × h1 + m2 × h2) / (m1 + m2)`
-3. Resolve mixed state from **Tdb + W**: Since we have W_mix, use the existing `Tdb+h` resolver to find Tdb_mix from h_mix and W_mix.
+#### 3.2.2 Using psychrolib
 
-**Corrected resolution approach**: The mixed state has known W_mix and h_mix. To find Tdb_mix:
-- Use the enthalpy equation algebraically: `Tdb = (h - W × c2) / (c1 + W × c3)` where c1, c2, c3 are the psychrometric constants. In IP: `Tdb = (h - W × 1061) / (0.240 + W × 0.444)`.
-- Then resolve the full state from `(Tdb_mix, W_mix)` using the existing `_resolve_tdb_w()` path.
-- Alternatively, use the existing `_resolve_tdb_h()` iterative resolver by passing Tdb as an initial guess and h as target — but this requires Tdb which we don't have yet. The algebraic approach is cleaner.
-
-#### Data Model
-
-New file or addition to `backend/app/models/mixing.py`:
+psychrolib is the calculation engine. It must be configured for the correct unit system. The library supports both SI and IP (inch-pound / imperial) units via a global setting:
 
 ```python
-class MixingStreamInput(BaseModel):
-    """One airstream in a mixing calculation."""
-    input_pair: tuple[str, str]
-    values: tuple[float, float]
-    airflow: float   # CFM (IP) or m³/s (SI)
-    label: str = ""
-
-class MixingInput(BaseModel):
-    """Input for adiabatic mixing calculation."""
-    streams: list[MixingStreamInput]  # 2 or more streams
-    unit_system: UnitSystem = UnitSystem.IP
-    pressure: float = DEFAULT_PRESSURE_IP
-
-class MixingOutput(BaseModel):
-    """Result of an adiabatic mixing calculation."""
-    unit_system: UnitSystem
-    pressure: float
-    streams: list[dict]           # Each stream's resolved state + mass flow
-    mixed_point: dict             # Full StatePointOutput as dict
-    path_points: list[PathPoint]  # Line from stream 1 to stream 2 (2-stream case)
-    metadata: dict                # {total_airflow, mass_flows, mixing_ratios}
+import psychrolib
+psychrolib.SetUnitSystem(psychrolib.SI)  # or psychrolib.IP
 ```
 
-#### Edge Cases
-- **Two identical streams**: Should work fine, mixed point equals both inputs
-- **One stream at 0 CFM**: Effectively no mixing, result equals the other stream. Allow this (don't error).
-- **More than 2 streams**: Supported — just extend the mass-weighted average to N streams. Path visualization only shown for 2-stream case.
-- **Mixed point above saturation**: If the mixed W_mix exceeds W_sat at Tdb_mix, condensation occurs. Add warning: "Mixed air is supersaturated — condensation would occur."
+**Critical**: Set the unit system once at module initialization. All inputs and outputs must match the selected unit system. Since EPW data arrives in SI (°C, Pa), it's simplest to compute in SI first and then convert to IP for display if the user's preference is imperial.
 
-#### API Route
+#### 3.2.3 Calculations Per Hour
 
-New file: `backend/app/api/mixing.py`
+Given: `dry_bulb_c`, `dewpoint_c`, `pressure_pa`
 
-- `POST /api/v1/mixing` — takes MixingInput, returns MixingOutput
-- Register in `router.py`
+Compute the following using psychrolib:
 
-#### Tasks
-- [ ] Create `backend/app/models/mixing.py` with MixingStreamInput, MixingInput, MixingOutput
-- [ ] Create `backend/app/engine/processes/mixing.py`
-- [ ] Implement 2-stream mixing with algebraic Tdb resolution
-- [ ] Extend to N-stream mixing
-- [ ] Create `backend/app/api/mixing.py` with POST /api/v1/mixing
-- [ ] Register mixing router in `backend/app/api/router.py`
-- [ ] Write tests: `backend/tests/test_mixing.py`
-  - Standard OA mixing: 80% return air (75°F/50%) + 20% outdoor air (95°F/75°F wb)
-  - Verify mixed point lies on the line between the two states
-  - Equal flow rates: mixed point at midpoint
-  - 3-stream mixing
-  - Edge: one stream at 0 CFM
-  - SI units
+```python
+# Humidity ratio from dewpoint
+humidity_ratio = psychrolib.GetHumRatioFromTDewPoint(dewpoint_c, pressure_pa)
+# Returns: kg_water / kg_dry_air (SI) or lb_water / lb_dry_air (IP)
 
-**Verification:** Standard OA mixing problem. Verify mixed point lies on the line between the two states proportionally to mass flow ratios.
+# Wet-bulb temperature
+wet_bulb_c = psychrolib.GetTWetBulbFromTDewPoint(dry_bulb_c, dewpoint_c, pressure_pa)
+
+# Relative humidity (as a decimal 0.0–1.0 in psychrolib)
+rh = psychrolib.GetRelHumFromTDewPoint(dry_bulb_c, dewpoint_c)
+# Note: psychrolib returns RH as a fraction (0.0 to 1.0), not a percentage
+
+# Enthalpy
+enthalpy = psychrolib.GetMoistAirEnthalpy(dry_bulb_c, humidity_ratio)
+# Returns: J/kg (SI) or BTU/lb (IP)
+
+# Specific volume
+specific_volume = psychrolib.GetMoistAirVolume(dry_bulb_c, humidity_ratio, pressure_pa)
+# Returns: m³/kg (SI) or ft³/lb (IP)
+```
+
+#### 3.2.4 Output Structure
+
+```python
+@dataclass
+class PsychrometricState:
+    # Identifiers
+    month: int
+    day: int
+    hour: int
+
+    # Properties (stored in SI internally; convert on output)
+    dry_bulb_c: float
+    wet_bulb_c: float
+    dewpoint_c: float
+    humidity_ratio: float       # kg/kg (SI)
+    relative_humidity: float    # fraction 0.0–1.0
+    enthalpy_j_per_kg: float   # J/kg (SI)
+    specific_volume_m3_per_kg: float  # m³/kg (SI)
+    pressure_pa: float
+
+    # For IP display conversions:
+    # DB °F = DB °C × 9/5 + 32
+    # WB °F = WB °C × 9/5 + 32
+    # DP °F = DP °C × 9/5 + 32
+    # ω grains/lb = ω kg/kg × 7000
+    # h BTU/lb = h J/kg × 0.000429923 (or use psychrolib in IP mode)
+    # v ft³/lb = v m³/kg × specific_volume conversion
+```
+
+**Important implementation note on unit conversions**: Rather than manually converting between SI and IP, a cleaner approach is to run all psychrolib calculations twice — once in SI for internal clustering math, and once in IP for user-facing output — or to compute everything in SI and convert the final output values. The conversion factors are:
+
+| Property | SI Unit | IP Unit | Conversion |
+|----------|---------|---------|-----------|
+| Temperature | °C | °F | °F = °C × 9/5 + 32 |
+| Humidity ratio | kg/kg | grains/lb | gr/lb = kg/kg × 7000 |
+| Enthalpy | J/kg | BTU/lb | BTU/lb = J/kg / 2326 |
+| Specific volume | m³/kg | ft³/lb | ft³/lb = m³/kg × 16.018 |
+| Pressure | Pa | psi | psi = Pa / 6894.76 |
+
+However, for maximum accuracy, the recommended approach is to use psychrolib in IP mode directly with converted temperature and pressure inputs, rather than converting outputs. psychrolib internally adjusts calculation constants for each unit system.
+
+#### 3.2.5 Batch Processing
+
+Process all 8,760 records and return a list of `PsychrometricState` objects. If any individual record fails calculation (e.g., due to corrupt data), log a warning and skip that hour rather than failing the entire batch.
 
 ---
 
-### Chunk 2.4 — Process UI (Builder, Rendering, List)
+### 3.3 Clustering (`clustering.py`)
 
-**Goal:** Frontend can define, render, and manage processes on the chart.
+#### 3.3.1 Purpose
 
-#### Zustand Store Changes
+Group the 8,760 hourly psychrometric states into a manageable number of clusters, each representing a distinct "operating regime" for the HVAC system. Then extract representative and worst-case points from each cluster.
 
-Update `frontend/src/store/useStore.ts`:
+#### 3.3.2 Feature Selection and Normalization
 
-```typescript
-// New state
-processes: ProcessOutput[]
-processLoading: boolean
-processError: string | null
+**Clustering axes**: Dry-bulb temperature and humidity ratio. These two properties define a unique point on the psychrometric chart and together capture both sensible and latent conditions.
 
-// New actions
-addProcess: (process: ProcessOutput) => void
-removeProcess: (index: number) => void
-clearProcesses: () => void
-setProcessLoading: (loading: boolean) => void
-setProcessError: (error: string | null) => void
+**Why normalization is critical**: Dry-bulb temperature (in °C) ranges roughly from -10 to 45 for most climates, while humidity ratio (in kg/kg) ranges from about 0.001 to 0.025. Without normalization, temperature would dominate the distance metric and humidity ratio would be effectively ignored.
+
+**Normalization method**: Use StandardScaler from scikit-learn, which transforms each feature to have zero mean and unit variance.
+
+```python
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
+import numpy as np
+
+# Prepare feature matrix: shape (8760, 2)
+X = np.array([[state.dry_bulb_c, state.humidity_ratio] for state in states])
+
+# Normalize
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
 ```
 
-#### New TypeScript Types
+#### 3.3.3 K-Means Configuration
 
-Update `frontend/src/types/psychro.ts`:
+```python
+# Default number of clusters
+DEFAULT_K = 5
 
-```typescript
-interface ProcessOutput {
-  process_type: string
-  unit_system: string
-  pressure: number
-  start_point: StatePointOutput
-  end_point: StatePointOutput
-  path_points: {Tdb: number, W: number, W_display: number}[]
-  metadata: Record<string, number | string>
-  warnings: string[]
+def cluster_weather_data(
+    states: list[PsychrometricState],
+    n_clusters: int = DEFAULT_K,
+    random_state: int = 42  # for reproducibility
+) -> ClusterResult:
+
+    X = np.array([[s.dry_bulb_c, s.humidity_ratio] for s in states])
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    kmeans = KMeans(
+        n_clusters=n_clusters,
+        random_state=random_state,
+        n_init=10,      # number of initializations to avoid poor convergence
+        max_iter=300     # default, but being explicit
+    )
+    kmeans.fit(X_scaled)
+
+    labels = kmeans.labels_  # array of length 8760, values 0 to n_clusters-1
+    # ...
+```
+
+**Why k=5 as default**: For most climates, 5 clusters captures the major operating regimes well (hot-dry, warm-mild, cool, cold, and warm-humid if applicable). The user should be able to adjust this, but 5 is a good starting point.
+
+**Optional enhancement — automatic k selection**: You could implement the elbow method or silhouette score to suggest an optimal k, but this is not required for the initial implementation. A fixed default of 5 with user override is sufficient.
+
+#### 3.3.4 Cluster Analysis Output
+
+For each cluster, extract:
+
+1. **Centroid** (in original, non-scaled coordinates): This is the "typical" condition for that cluster.
+
+   ```python
+   # Transform centroids back to original scale
+   centroids_original = scaler.inverse_transform(kmeans.cluster_centers_)
+   ```
+
+2. **Hour count**: How many of the 8,760 hours belong to this cluster.
+
+3. **Worst-case point**: The hour within this cluster that has the highest moist air enthalpy. This represents the most demanding condition within that operating regime.
+
+   ```python
+   # For each cluster, find the point with highest enthalpy
+   for cluster_id in range(n_clusters):
+       mask = labels == cluster_id
+       cluster_states = [s for s, m in zip(states, mask) if m]
+       worst = max(cluster_states, key=lambda s: s.enthalpy_j_per_kg)
+   ```
+
+4. **Centroid psychrometric state**: The centroid gives you a (DB, ω) pair. From this, compute the full psychrometric state using a representative atmospheric pressure (e.g., the mean pressure from the weather file or the site elevation-adjusted standard pressure).
+
+#### 3.3.5 Output Structure
+
+```python
+@dataclass
+class ClusterInfo:
+    cluster_id: int
+    hour_count: int
+    centroid_state: PsychrometricState  # full psych state at centroid
+    worst_case_state: PsychrometricState  # the actual hour with highest enthalpy in this cluster
+    fraction_of_year: float  # hour_count / 8760
+
+@dataclass
+class ClusterResult:
+    cluster_infos: list[ClusterInfo]
+    labels: list[int]  # length 8760, cluster assignment per hour
+    all_states: list[PsychrometricState]  # all 8760 states, for plotting
+```
+
+---
+
+### 3.4 Design Point Extractor (`design_extractor.py`)
+
+#### 3.4.1 Purpose
+
+This is the orchestration module. It calls the parser, calculator, and clustering modules, then extracts the final set of design points that the designer uses.
+
+#### 3.4.2 Extreme Point Extraction
+
+Three extreme design points, extracted from the full 8,760-hour dataset:
+
+**Peak Cooling Point**:
+- Select the hour with the **highest moist air enthalpy**.
+- Rationale: Enthalpy captures the total energy content of the air (sensible + latent). The hour with the highest enthalpy is the hour that demands the most from a cooling coil — it must remove the most total energy. This is more accurate than selecting by dry-bulb alone, which misses latent load.
+
+**Peak Heating Point**:
+- Select the hour with the **lowest dry-bulb temperature**.
+- Rationale: Heating load is almost entirely sensible (driven by temperature difference). Humidity is not a major factor in heating sizing. Using the absolute minimum is appropriate; if you want to be less conservative, use the 0.4th percentile (approximately the 35th lowest hour out of 8,760).
+- Implementation: `sorted_by_db = sorted(states, key=lambda s: s.dry_bulb_c)` → take the first element, or use `np.percentile` on the dry-bulb array at 0.4%.
+
+**Peak Dehumidification Point**:
+- Select the hour with the **highest dewpoint temperature** (or equivalently, highest humidity ratio) that occurs when dry-bulb is **below the cooling design dry-bulb**.
+- Rationale: This captures the condition where the air is very humid but not extremely hot — meaning the cooling system may not run aggressively enough to dehumidify. This is the condition that causes mold, comfort complaints, and code violations in healthcare and education spaces.
+- Implementation:
+  ```python
+  # Find the peak cooling dry-bulb first
+  peak_cooling_db = peak_cooling_state.dry_bulb_c
+  # Filter to hours below that
+  moderate_hours = [s for s in states if s.dry_bulb_c < peak_cooling_db * 0.85]
+  # From those, find the one with highest humidity ratio
+  peak_dehum = max(moderate_hours, key=lambda s: s.humidity_ratio)
+  ```
+  The `0.85` factor (85% of peak DB) is a reasonable threshold to isolate "moderate temperature" hours. This can be adjusted; the key is to exclude the truly hot hours where the system is running at full capacity and dehumidifying adequately as a byproduct.
+
+#### 3.4.3 Full Pipeline
+
+```python
+def extract_design_conditions(
+    epw_file_path: str,
+    n_clusters: int = 5,
+    unit_system: str = "IP"  # or "SI"
+) -> DesignConditionResult:
+
+    # Step 1: Parse
+    epw_data = parse_epw(epw_file_path)
+
+    # Step 2: Compute psychrometric states
+    states = compute_all_states(epw_data.hourly_records)
+
+    # Step 3: Extract extremes
+    peak_cooling = extract_peak_cooling(states)
+    peak_heating = extract_peak_heating(states)
+    peak_dehum = extract_peak_dehumidification(states, peak_cooling)
+
+    # Step 4: Cluster and extract intermediate points
+    cluster_result = cluster_weather_data(states, n_clusters=n_clusters)
+
+    # Step 5: Package results
+    design_points = [peak_cooling, peak_heating, peak_dehum]
+    for cluster_info in cluster_result.cluster_infos:
+        design_points.append(cluster_info.worst_case_state)
+
+    # Step 6: Convert to requested unit system if needed
+    if unit_system == "IP":
+        design_points = [convert_to_ip(p) for p in design_points]
+        # also convert all_states for plotting
+
+    return DesignConditionResult(
+        location=epw_data.location,
+        design_points=design_points,
+        cluster_infos=cluster_result.cluster_infos,
+        all_hourly_states=cluster_result.all_states,
+        labels=cluster_result.labels
+    )
+```
+
+#### 3.4.4 Final Output Structure
+
+```python
+@dataclass
+class DesignPoint:
+    label: str                    # e.g., "Peak Cooling", "Cluster 3 Worst-Case"
+    point_type: str               # "extreme" or "cluster"
+    state: PsychrometricState     # full psychrometric properties
+    cluster_id: int | None        # None for extremes
+    hours_in_cluster: int | None  # None for extremes
+
+@dataclass
+class DesignConditionResult:
+    location: EPWLocation
+    design_points: list[DesignPoint]
+    cluster_infos: list[ClusterInfo]
+    all_hourly_states: list[PsychrometricState]  # for chart plotting
+    labels: list[int]                             # cluster assignment per hour
+```
+
+---
+
+## 4. Backend API
+
+### 4.1 Endpoints
+
+#### POST `/api/weather/upload`
+
+Accepts an EPW file upload, processes it through the full pipeline, and returns results.
+
+**Request**: `multipart/form-data` with a single file field named `file`.
+
+**Query parameters**:
+- `n_clusters` (optional, default 5): Number of clusters for k-means
+- `unit_system` (optional, default "IP"): "IP" for imperial, "SI" for metric
+
+**Response** (JSON):
+
+```json
+{
+    "location": {
+        "city": "Los Angeles",
+        "state": "CA",
+        "country": "USA",
+        "latitude": 33.94,
+        "longitude": -118.4,
+        "elevation_m": 30.0
+    },
+    "design_points": [
+        {
+            "label": "Peak Cooling",
+            "point_type": "extreme",
+            "dry_bulb": 104.2,
+            "wet_bulb": 71.1,
+            "dewpoint": 58.3,
+            "humidity_ratio": 73.2,
+            "enthalpy": 37.8,
+            "relative_humidity": 0.18,
+            "specific_volume": 14.72,
+            "month": 8,
+            "day": 15,
+            "hour": 15,
+            "cluster_id": null,
+            "hours_in_cluster": null
+        },
+        {
+            "label": "Peak Heating",
+            "point_type": "extreme",
+            "...": "..."
+        },
+        {
+            "label": "Peak Dehumidification",
+            "point_type": "extreme",
+            "...": "..."
+        },
+        {
+            "label": "Cluster 1 — Warm Dry",
+            "point_type": "cluster_worst_case",
+            "...": "...",
+            "cluster_id": 0,
+            "hours_in_cluster": 1740
+        }
+    ],
+    "chart_data": {
+        "hourly_points": [
+            {
+                "dry_bulb": 58.3,
+                "humidity_ratio": 42.1,
+                "cluster_id": 2
+            }
+        ]
+    },
+    "cluster_summary": [
+        {
+            "cluster_id": 0,
+            "label": "Warm Dry",
+            "hour_count": 1740,
+            "fraction_of_year": 0.199,
+            "centroid_dry_bulb": 88.3,
+            "centroid_humidity_ratio": 54.1
+        }
+    ]
 }
-
-interface MixingOutput {
-  unit_system: string
-  pressure: number
-  streams: Record<string, any>[]
-  mixed_point: StatePointOutput
-  path_points: {Tdb: number, W: number, W_display: number}[]
-  metadata: Record<string, number | string>
-}
 ```
 
-#### New Components
+**Notes on the `chart_data.hourly_points` array**:
+- This array will have 8,760 entries. To keep response size manageable, include only `dry_bulb`, `humidity_ratio`, and `cluster_id` per point (these are what the frontend needs to plot and color-code).
+- The full psychrometric state is only included for the design points, not all 8,760 hours.
 
-**`frontend/src/components/Process/ProcessBuilder.tsx`:**
-- Process type dropdown (sensible heating, sensible cooling, cooling & dehum, mixing)
-- Dynamic form that adapts to selected process:
-  - Sensible: start point selector (dropdown of existing state points OR manual input pair) + mode selector (target Tdb / ΔT / Q+CFM) + appropriate inputs
-  - Cooling & dehum: start point + mode (forward: ADP + BF / reverse: leaving conditions)
-  - Mixing: two stream selectors (existing point OR manual) + CFM for each
-- Submit → call backend → store result in Zustand → auto-add end point to state points
+#### GET `/api/weather/status`
 
-**Update `frontend/src/components/Chart/PsychroChart.tsx`:**
-- Render process lines as new Plotly traces
-- Line styles: solid for process path, dashed for ADP extension
-- Color: distinct from background lines (e.g., orange for sensible, cyan for cooling, magenta for mixing)
-- Arrow annotations showing process direction (Plotly annotations with `ax`/`ay`)
-- Process end points auto-added as state points if not already present
+Health check / feature availability endpoint. Returns whether the required dependencies (scikit-learn, numpy) are available.
 
-**`frontend/src/components/Process/ProcessList.tsx`:**
-- List all processes with type, start/end labels, key metadata summary
-- Expandable detail row for full metadata (Qs, Ql, Qt, SHR, BF, etc.)
-- Warnings displayed inline (yellow text)
-- Delete button per process
+### 4.2 Error Handling
 
-#### API Client Additions
+Return clear HTTP error responses:
+- `400` if the file is not a valid EPW file (with descriptive message)
+- `400` if n_clusters is out of valid range (suggest 3–10)
+- `422` if the file has corrupt or missing data that prevents analysis
+- `500` for unexpected server errors
 
-Update `frontend/src/api/client.ts`:
+---
 
-```typescript
-async function calculateProcess(input: ProcessInput): Promise<ProcessOutput>
-async function calculateMixing(input: MixingInput): Promise<MixingOutput>
+## 5. Frontend Integration
+
+### 5.1 File Upload UI
+
+Add a section (could be a sidebar panel, modal, or dedicated tab) with:
+
+1. A file upload input accepting `.epw` files
+2. An optional slider or dropdown for number of clusters (default 5, range 3–10)
+3. A "Process" button
+4. A loading indicator (processing 8,760 points takes a moment)
+
+### 5.2 Chart Overlay
+
+After processing, add the following traces to the existing Plotly.js psychrometric chart:
+
+**Weather data scatter trace**:
+- Plot all 8,760 points as small, semi-transparent markers
+- X-axis: dry-bulb temperature
+- Y-axis: humidity ratio
+- Color-code by cluster assignment (use a qualitative color palette — e.g., Plotly's built-in qualitative scales, or manually assign 5–8 distinct colors)
+- Marker size: small (3–4px) to avoid visual clutter
+- Opacity: 0.3–0.5 so overlapping points create a density effect
+
+**Design point markers**:
+- Plot the extracted design points as larger, prominent markers (size 12–15px)
+- Use distinct marker shapes: circle for cluster worst-case, star or diamond for extremes
+- Add hover text showing the full psychrometric state and the point label
+- These should be visually dominant over the weather data scatter
+
+**Cluster centroids** (optional but helpful):
+- Plot as medium-sized markers (8–10px) with an "X" or "+" shape
+- Label with "Centroid" in hover text
+
+### 5.3 Summary Table
+
+Display a table (below the chart or in a sidebar) showing each design point with all properties. This table should be:
+
+- Sortable by any column
+- Show units in the column headers appropriate to the user's selected unit system
+- Highlight extreme points differently from cluster points (e.g., bold the extreme rows)
+- Include the hour count and fraction-of-year for cluster points
+
+### 5.4 Interaction Between Weather Data and Existing Chart Features
+
+The weather data overlay should be toggleable — the user should be able to show/hide it without losing the data. If the user has existing state points plotted on the chart (from PsychroApp's existing state point management feature), both should coexist on the same chart.
+
+---
+
+## 6. Cluster Labeling Strategy
+
+### 6.1 Automatic Labeling
+
+Rather than showing "Cluster 0", "Cluster 1", etc., assign descriptive labels based on the centroid's position on the psychrometric chart. A simple heuristic:
+
+```python
+def label_cluster(centroid_db_f: float, centroid_rh: float) -> str:
+    """
+    Assign a descriptive label based on centroid conditions.
+    centroid_db_f: dry-bulb in °F
+    centroid_rh: relative humidity as fraction (0-1)
+    """
+    if centroid_db_f >= 90:
+        temp_label = "Hot"
+    elif centroid_db_f >= 75:
+        temp_label = "Warm"
+    elif centroid_db_f >= 60:
+        temp_label = "Mild"
+    elif centroid_db_f >= 45:
+        temp_label = "Cool"
+    else:
+        temp_label = "Cold"
+
+    if centroid_rh >= 0.65:
+        moisture_label = "Humid"
+    elif centroid_rh >= 0.35:
+        moisture_label = "Moderate"
+    else:
+        moisture_label = "Dry"
+
+    return f"{temp_label} {moisture_label}"
 ```
 
-#### Layout Changes
-
-- Add a "Processes" section below the state points in the Sidebar
-- Or: add a tab system to the Sidebar (Points | Processes)
-
-#### Tasks
-- [ ] Update TypeScript types in `psychro.ts` for ProcessOutput, MixingOutput
-- [ ] Update Zustand store with process state slice and actions
-- [ ] Add API client functions for process and mixing endpoints
-- [ ] Create `ProcessBuilder.tsx` with dynamic forms per process type
-- [ ] Create `ProcessList.tsx` with expandable metadata cards
-- [ ] Update `PsychroChart.tsx` to render process lines and arrows
-- [ ] Update `Sidebar.tsx` to include process builder and list
-- [ ] Manual integration test: build a simple AHU chain (OA+RA mix → cooling coil → supply)
-
-**Verification:** Build a simple AHU process chain: OA + RA mix → cooling coil → supply. See all processes on the chart with correct paths and metadata.
+This produces labels like "Warm Humid", "Cool Dry", "Hot Moderate", etc., which immediately tell the designer what kind of operating condition the cluster represents.
 
 ---
 
-**PHASE 2 COMPLETE**
+## 7. Testing Strategy
 
-At this point we have: the base chart + state points + the three most-used HVAC processes (sensible, cooling/dehum, mixing) fully working with UI.
+### 7.1 EPW Parser Tests
 
----
+- Test with a known EPW file (download one from energyplus.net/weather for a well-known location like Los Angeles or Chicago)
+- Verify location metadata extraction matches expected values
+- Verify hourly record count is 8,760
+- Verify a spot-checked hour (e.g., the first hour of the file) matches the expected values
+- Test error handling: truncated file, wrong format, missing data markers
 
-## PHASE 3: Extended Processes
+### 7.2 Psychrometric Calculation Tests
 
-### Chunk 3.1 — Humidification Solvers (Steam, Adiabatic, Heated Water)
+- Compute states for a set of known input conditions and verify against published psychrometric tables or an online calculator
+- Example: At standard pressure (101325 Pa), 35°C DB, 20°C DP → verify the computed WB, ω, h, RH, v match expected values within acceptable tolerance (0.1% for most properties)
+- Test edge cases: 0°C DB, very high humidity, very low humidity
 
-**Tasks:**
-- Steam humidification solver: constant Tdb (vertical path), given start + target W or RH
-- Adiabatic humidification solver: constant Twb (diagonal path toward saturation), given start + effectiveness or target RH
-- Heated water spray solver: path between vertical and diagonal depending on water temp, parameterized by water temperature
-- Path generation for each (straight or along Twb curve)
-- Tests for each
+### 7.3 Clustering Tests
 
----
+- With synthetic data (e.g., two well-separated Gaussian blobs), verify k=2 correctly separates them
+- Verify centroid inverse transformation returns values in the expected range
+- Verify hour counts sum to 8,760
+- Verify worst-case extraction returns the actual highest-enthalpy point per cluster
 
-### Chunk 3.2 — Evaporative Cooling Solvers (Direct, Indirect, Two-Stage)
+### 7.4 Integration Tests
 
-**Tasks:**
-- Direct evaporative: along constant Twb line, parameterized by effectiveness
-- Indirect evaporative: sensible cooling only (horizontal), parameterized by effectiveness and secondary airstream wet-bulb
-- Indirect-direct two-stage: two connected segments (horizontal then diagonal)
-- Path generation for each
-- Tests for each
+- Run the full pipeline on a real EPW file
+- Verify the number of design points equals 3 (extremes) + n_clusters
+- Verify peak cooling enthalpy ≥ all other points' enthalpy
+- Verify peak heating DB ≤ all other points' DB
+- Verify cluster hour counts sum to 8,760
 
----
+### 7.5 API Tests
 
-### Chunk 3.3 — Chemical Dehumidification + Sensible Reheat
-
-**Tasks:**
-- Chemical/desiccant dehumidification: approximately constant h, Tdb rises as W drops. Given start + target W.
-- Sensible reheat: horizontal path (same as sensible heating, but contextually follows a dehumidification step). Given start + target Tdb.
-- Tests for each
-
----
-
-### Chunk 3.4 — Extended Process UI + Process Chaining
-
-**Tasks:**
-- Extend `ProcessBuilder.tsx` to support all new process types with appropriate parameter forms
-- Implement process chaining: the end point of one process can be selected as the start point of the next
-  - UI: "chain from previous" toggle that auto-selects the last process's end point
-  - Visual: connected process traces on the chart with sequential numbering/coloring
-- Update `ProcessList.tsx` to show chain relationships
-- Render all new process paths on chart (curved paths for adiabatic/evaporative)
+- Test file upload with a valid EPW file, verify 200 response with expected structure
+- Test with an invalid file, verify 400 response
+- Test with different n_clusters values
 
 ---
 
-**PHASE 3 COMPLETE**
+## 8. Dependencies
 
-Full process coverage. Every psychrometric process from the list is implemented and renderable.
+Add to `requirements.txt`:
 
----
-
-## PHASE 4: Coil Analysis & SHR Tools
-
-### Chunk 4.1 — Coil Analysis Engine + API
-
-**Tasks:**
-- Implement `engine/coil.py`:
-  - Forward calc: entering conditions + ADP + BF → leaving conditions + loads
-  - Reverse calc: entering + leaving conditions → ADP + BF
-  - Full load breakdown: Qs, Ql, Qt, SHR
-  - GPM estimate (given entering/leaving water temps and Qt)
-- Implement `/api/v1/coil` endpoint
-- Tests with known coil data
-
----
-
-### Chunk 4.2 — SHR Line Engine + API
-
-**Tasks:**
-- Implement `engine/shr.py`:
-  - Room SHR line: given room state + SHR → compute slope, generate line points through room state
-  - ADP from SHR: find intersection of SHR line with saturation curve
-  - Grand SHR: given room conditions, OA conditions, OA fraction, room loads → GSHR
-  - Effective SHR: given GSHR + BF → ESHR
-- Implement `/api/v1/shr` endpoint
-- Tests against textbook GSHR/ESHR examples
-
----
-
-### Chunk 4.3 — Coil & SHR Frontend
-
-**Tasks:**
-- `CoilAnalysis.tsx` panel:
-  - Input form: entering conditions (select from existing state points or enter manually), leaving conditions or ADP+BF
-  - Results display: full load breakdown, ADP, BF, CF
-  - Button to add the coil process to the chart
-- SHR line rendering on chart:
-  - Draw SHR line through selected room point
-  - Mark ADP intersection on saturation curve
-  - Optional: SHR protractor reference in corner of chart
-- Integrate with process chain (coil process links to SHR line)
-
----
-
-**PHASE 4 COMPLETE**
-
-Full coil analysis and SHR tooling — the stuff that directly feeds into AHU and coil selection.
-
----
-
-## PHASE 5: Airflow, Energy & Utilities
-
-### Chunk 5.1 — Airflow & Energy Calculation Engine + API
-
-**Tasks:**
-- Implement `engine/airflow.py`:
-  - Sensible: Qs = C x CFM x delta_T (solve for any variable)
-  - Latent: Ql = C x CFM x delta_W (solve for any variable)
-  - Total: Qt = C x CFM x delta_h (solve for any variable)
-  - Altitude correction factors for the C constants
-  - Air density at conditions
-  - Condensation check: is_condensing(surface_temp, dew_point) -> bool
-- Implement `/api/v1/airflow-calc` endpoint
-- Tests at sea level and at altitude (e.g., 5000 ft)
-
----
-
-### Chunk 5.2 — Utilities Frontend
-
-**Tasks:**
-- `AirflowCalc.tsx` panel:
-  - Mode selector: solve for Q, CFM, or delta_T/delta_W/delta_h
-  - Input fields adapt to selected mode
-  - "Auto-fill from process" button: select a process, auto-populate delta values
-  - Altitude correction display
-  - Condensation risk checker: input surface temp, select a state point -> flag yes/no
-- Results display with formula shown
-
----
-
-**PHASE 5 COMPLETE**
-
-All the quick-calc utilities are in place. The app is now a comprehensive psychrometric design tool.
-
----
-
-## PHASE 6: Polish & Export
-
-### Chunk 6.1 — Project Save/Load + Data Export
-
-**Tasks:**
-- Define JSON schema for project file (all state points, processes, settings)
-- Save project -> download .json file
-- Load project -> upload .json file -> restore full state
-- Export chart as PNG/SVG (Plotly built-in)
-- Export data table as CSV
-
----
-
-### Chunk 6.2 — Chart Interactivity Enhancements
-
-**Tasks:**
-- Click on chart to add a state point (opens pre-filled form with clicked Tdb/W)
-- Process chain visual builder: click start point -> select process type -> click or configure end -> trace appears
-- Keyboard shortcuts (Delete to remove selected point, Ctrl+Z for undo)
-- Undo/redo system (state history stack in Zustand)
-
----
-
-### Chunk 6.3 — UI Polish
-
-**Tasks:**
-- Responsive panel layout (resizable sidebar)
-- Color theme for process types (consistent legend)
-- Chart legend panel (toggle visibility of background lines, processes)
-- Light mode option (dark mode is current default)
-- Loading states and error handling throughout
-- Print-friendly chart layout
-
----
-
-**PHASE 6 COMPLETE**
-
-The app is polished and production-usable.
-
----
-
-## PHASE 7: Stretch Goals (pick and choose)
-
-| Chunk | Feature |
-|---|---|
-| 7.1 | ASHRAE design day conditions overlay (by city/CZ) |
-| 7.2 | TMY bin data scatter/heatmap overlay |
-| 7.3 | AHU wizard mode (guided workflow) |
-| 7.5 | Electron/Tauri native Windows wrapper |
-| 7.6 | PDF report generation |
-
----
-
-## Summary: Chunk Count by Phase
-
-| Phase | Chunks | Status |
-|---|---|---|
-| Phase 1 — Foundation | 5 chunks | ✅ Complete |
-| Phase 2 — Core Processes | 4 chunks | 🔲 Up Next |
-| Phase 3 — Extended Processes | 4 chunks | 🔲 Planned |
-| Phase 4 — Coil & SHR | 3 chunks | 🔲 Planned |
-| Phase 5 — Utilities | 2 chunks | 🔲 Planned |
-| Phase 6 — Polish | 3 chunks | 🔲 Planned |
-| Phase 7 — Stretch | a la carte | 🔲 Backlog |
-| **Total (Phases 1-6)** | **21 chunks** | |
-
----
-
-## Recommended Build Order
-
-Continue sequentially from **Chunk 2.1**. Each chunk is designed so that at the end of it, you can run the app and see/test the new capability. No chunk leaves you in a broken intermediate state.
-
-**Before starting Chunk 2.1:** Confirm the backend starts and all 79 tests pass.
-
-```bash
-# Backend
-cd backend
-python -m uvicorn app.main:app --reload --port 8000
-
-# Tests
-python -m pytest tests/ -v
 ```
+scikit-learn>=1.3.0
+numpy>=1.24.0
+psychrolib>=2.5.0
+```
+
+These are in addition to existing PsychroApp dependencies (FastAPI, uvicorn, etc.).
+
+---
+
+## 9. Implementation Sequence
+
+Implement in this order, testing each module before moving to the next:
+
+1. **`epw_parser.py`** + tests — Get a clean data pipeline from file to structured records
+2. **`psychrometric_calc.py`** + tests — Compute full states from parsed records
+3. **`clustering.py`** + tests — Cluster the states and extract per-cluster info
+4. **`design_extractor.py`** + tests — Orchestrate the pipeline and extract design points
+5. **Backend API endpoint** + tests — Wire up the file upload and response
+6. **Frontend: file upload + chart overlay** — Display the 8,760 points and design points
+7. **Frontend: summary table** — Show the design points in tabular form
+8. **Polish: cluster labeling, toggle visibility, unit conversions** — Refine the user experience
+
+---
+
+## 10. File Size and Performance Considerations
+
+- An EPW file is ~1.5–2.5 MB of text. Parsing is fast (< 1 second).
+- Computing 8,760 psychrometric states with psychrolib takes < 1 second on modern hardware.
+- K-means on 8,760 × 2 features with k=5 converges in milliseconds.
+- The response JSON with 8,760 chart points is roughly 300–500 KB. This is acceptable for a single upload workflow.
+- If response size becomes a concern, the chart data points could be downsampled (e.g., every 3rd hour = 2,920 points) with minimal visual impact, but this should not be necessary for the initial implementation.
+
+---
+
+## 11. Future Enhancements (Out of Scope for Initial Implementation)
+
+These are noted for context but should **not** be implemented now:
+
+- **Automatic k selection** using silhouette scores or elbow method
+- **Monthly or seasonal filtering** — analyze only summer months, or only occupied hours
+- **System performance overlay** — plot the HVAC system's capacity envelope on the same chart to visually identify where the system can't meet conditions
+- **Load calculation integration** — compute building loads at each design point, not just outdoor conditions
+- **Multiple weather file comparison** — overlay two climate locations on the same chart
+- **ASHRAE design condition comparison** — plot the ASHRAE published design conditions alongside the extracted points to show how they compare
