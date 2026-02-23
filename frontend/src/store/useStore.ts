@@ -118,13 +118,13 @@ interface AppState {
 
   // --- Phase 7: TMY data overlay ---
   tmyResult: TMYProcessOutput | null;
-  tmyDisplayMode: "scatter" | "heatmap";
+  tmyDisplayMode: "scatter" | "heatmap" | "clusters";
   tmyLoading: boolean;
 
   // Actions — TMY
   setTMYResult: (result: TMYProcessOutput | null) => void;
   clearTMYResult: () => void;
-  setTMYDisplayMode: (mode: "scatter" | "heatmap") => void;
+  setTMYDisplayMode: (mode: "scatter" | "heatmap" | "clusters") => void;
   setTMYLoading: (loading: boolean) => void;
 
   // --- Weather Analysis ---
