@@ -299,6 +299,59 @@ export interface TMYProcessOutput {
   total_hours: number;
 }
 
+// --- Weather Analysis types ---
+
+export interface EPWLocation {
+  city: string;
+  state: string;
+  country: string;
+  latitude: number;
+  longitude: number;
+  timezone: number;
+  elevation: number;
+}
+
+export interface WeatherDesignPoint {
+  label: string;
+  point_type: string; // "extreme" | "cluster_worst_case"
+  dry_bulb: number;
+  wet_bulb: number;
+  dewpoint: number;
+  humidity_ratio: number;
+  enthalpy: number;
+  relative_humidity: number;
+  specific_volume: number;
+  month: number;
+  day: number;
+  hour: number;
+  cluster_id: number | null;
+  hours_in_cluster: number | null;
+}
+
+export interface WeatherClusterSummary {
+  cluster_id: number;
+  label: string;
+  hour_count: number;
+  fraction_of_year: number;
+  centroid_dry_bulb: number;
+  centroid_humidity_ratio: number;
+}
+
+export interface WeatherChartPoint {
+  dry_bulb: number;
+  humidity_ratio: number;
+  cluster_id: number;
+}
+
+export interface WeatherAnalysisOutput {
+  unit_system: UnitSystem;
+  location: EPWLocation;
+  design_points: WeatherDesignPoint[];
+  cluster_summary: WeatherClusterSummary[];
+  chart_data: WeatherChartPoint[];
+  total_hours: number;
+}
+
 // --- AHU Wizard types ---
 
 export type AHUType = "mixed_air" | "full_oa" | "economizer";
