@@ -102,6 +102,7 @@ export default function PsychroChart() {
     designDayResult,
     tmyResult,
     tmyDisplayMode,
+    weatherAnalysis,
     setChartRef,
     setPendingClickPoint,
     selectedPointIndex,
@@ -328,7 +329,7 @@ export default function PsychroChart() {
           showlegend: true,
           hoverinfo: "skip",
         });
-      } else {
+      } else if (tmyDisplayMode === "heatmap") {
         // Heatmap mode — use bin_matrix
         const matrix = tmyResult.bin_matrix;
         const tdbEdges = tmyResult.bin_Tdb_edges;
@@ -360,6 +361,151 @@ export default function PsychroChart() {
             y: 0.3,
           },
         } as unknown as Data);
+      }
+    }
+
+    // --- Weather analysis cluster overlay ---
+    if (visibility.tmyData && tmyDisplayMode === "clusters" && weatherAnalysis && weatherAnalysis.chart_data.length > 0) {
+      const CLUSTER_COLORS = [
+        "#636EFA", "#EF553B", "#00CC96", "#AB63FA", "#FFA15A",
+        "#19D3F3", "#FF6692", "#B6E880", "#FF97FF", "#FECB52",
+      ];
+
+      const waIsIP = weatherAnalysis.unit_system === "IP";
+      const waTUnit = waIsIP ? "\u00B0F" : "\u00B0C";
+      const waWUnit = waIsIP ? "gr/lb" : "g/kg";
+
+      // Group chart data points by cluster_id
+      const clusterGroups = new Map<number, { x: number[]; y: number[] }>();
+      for (const pt of weatherAnalysis.chart_data) {
+        let group = clusterGroups.get(pt.cluster_id);
+        if (!group) {
+          group = { x: [], y: [] };
+          clusterGroups.set(pt.cluster_id, group);
+        }
+        group.x.push(pt.dry_bulb);
+        group.y.push(pt.humidity_ratio);
+      }
+
+      // One scatter trace per cluster
+      for (const [clusterId, group] of clusterGroups) {
+        const clusterInfo = weatherAnalysis.cluster_summary.find(c => c.cluster_id === clusterId);
+        const color = CLUSTER_COLORS[clusterId % CLUSTER_COLORS.length];
+        const label = clusterInfo?.label ?? `Cluster ${clusterId}`;
+
+        t.push({
+          x: group.x,
+          y: group.y,
+          mode: "markers",
+          type: "scatter",
+          marker: {
+            color,
+            size: 3,
+            opacity: 0.4,
+          },
+          name: label,
+          legendgroup: `weather-cluster-${clusterId}`,
+          showlegend: true,
+          hoverinfo: "skip",
+        });
+      }
+
+      // Cluster centroid markers
+      for (const cluster of weatherAnalysis.cluster_summary) {
+        const color = CLUSTER_COLORS[cluster.cluster_id % CLUSTER_COLORS.length];
+        t.push({
+          x: [cluster.centroid_dry_bulb],
+          y: [cluster.centroid_humidity_ratio],
+          mode: "markers",
+          type: "scatter",
+          marker: {
+            color,
+            size: 10,
+            symbol: "x",
+            line: { color: "#fff", width: 1.5 },
+          },
+          name: `${cluster.label} centroid`,
+          legendgroup: `weather-cluster-${cluster.cluster_id}`,
+          showlegend: false,
+          hovertemplate:
+            `<b>${cluster.label} Centroid</b><br>` +
+            `Tdb: ${fmt(cluster.centroid_dry_bulb, 1)}${waTUnit}<br>` +
+            `W: ${fmt(cluster.centroid_humidity_ratio, 1)} ${waWUnit}<br>` +
+            `${cluster.hour_count} hrs (${fmt(cluster.fraction_of_year * 100, 0)}%)` +
+            `<extra></extra>`,
+        });
+      }
+
+      // Design point markers
+      const extremePoints = weatherAnalysis.design_points.filter(p => p.point_type === "extreme");
+      const clusterWorstPoints = weatherAnalysis.design_points.filter(p => p.point_type === "cluster_worst_case");
+      const waHUnit = waIsIP ? "BTU/lb" : "kJ/kg";
+      const waVUnit = waIsIP ? "ft\u00B3/lb" : "m\u00B3/kg";
+
+      // Extreme design points — star markers
+      if (extremePoints.length > 0) {
+        t.push({
+          x: extremePoints.map(p => p.dry_bulb),
+          y: extremePoints.map(p => p.humidity_ratio),
+          mode: "text+markers",
+          type: "scatter",
+          marker: {
+            color: "#FFD700",
+            size: 14,
+            symbol: "star",
+            line: { color: "#fff", width: 1.5 },
+          },
+          text: extremePoints.map(p => p.label),
+          textposition: "top center",
+          textfont: { color: COLORS.textBright, size: 10, family: "IBM Plex Sans" },
+          name: "Design Points (Extreme)",
+          legendgroup: "weather-design-extreme",
+          showlegend: true,
+          hovertemplate: extremePoints.map(p =>
+            `<b>${p.label}</b><br>` +
+            `Tdb: ${fmt(p.dry_bulb, 1)}${waTUnit}<br>` +
+            `Twb: ${fmt(p.wet_bulb, 1)}${waTUnit}<br>` +
+            `Tdp: ${fmt(p.dewpoint, 1)}${waTUnit}<br>` +
+            `RH: ${fmt(p.relative_humidity * 100, 1)}%<br>` +
+            `W: ${fmt(p.humidity_ratio, 1)} ${waWUnit}<br>` +
+            `h: ${fmt(p.enthalpy, 1)} ${waHUnit}<br>` +
+            `v: ${fmt(p.specific_volume, 2)} ${waVUnit}<br>` +
+            `Month ${p.month}, Day ${p.day}, Hour ${p.hour}` +
+            `<extra></extra>`
+          ),
+        });
+      }
+
+      // Cluster worst-case design points — circle markers colored by cluster
+      for (const dp of clusterWorstPoints) {
+        const color = dp.cluster_id != null ? CLUSTER_COLORS[dp.cluster_id % CLUSTER_COLORS.length] : "#ff6b6b";
+        t.push({
+          x: [dp.dry_bulb],
+          y: [dp.humidity_ratio],
+          mode: "markers",
+          type: "scatter",
+          marker: {
+            color,
+            size: 12,
+            symbol: "circle",
+            line: { color: "#fff", width: 2 },
+          },
+          name: dp.label,
+          legendgroup: dp.cluster_id != null ? `weather-cluster-${dp.cluster_id}` : "weather-design-cluster",
+          showlegend: false,
+          hovertemplate:
+            `<b>${dp.label}</b><br>` +
+            `Tdb: ${fmt(dp.dry_bulb, 1)}${waTUnit}<br>` +
+            `Twb: ${fmt(dp.wet_bulb, 1)}${waTUnit}<br>` +
+            `Tdp: ${fmt(dp.dewpoint, 1)}${waTUnit}<br>` +
+            `RH: ${fmt(dp.relative_humidity * 100, 1)}%<br>` +
+            `W: ${fmt(dp.humidity_ratio, 1)} ${waWUnit}<br>` +
+            `h: ${fmt(dp.enthalpy, 1)} ${waHUnit}<br>` +
+            `v: ${fmt(dp.specific_volume, 2)} ${waVUnit}<br>` +
+            `${dp.hours_in_cluster != null ? dp.hours_in_cluster + " hrs in cluster<br>" : ""}` +
+            `Month ${dp.month}, Day ${dp.day}, Hour ${dp.hour}` +
+            `<extra></extra>`,
+        });
       }
     }
 
@@ -744,7 +890,7 @@ export default function PsychroChart() {
     }
 
     return t;
-  }, [chartData, statePoints, processes, coilResult, shrLines, gshrResult, designDayResult, tmyResult, tmyDisplayMode, selectedPointIndex, theme, visibility]);
+  }, [chartData, statePoints, processes, coilResult, shrLines, gshrResult, designDayResult, tmyResult, tmyDisplayMode, weatherAnalysis, selectedPointIndex, theme, visibility]);
 
   // Layout
   const layout = useMemo<Partial<Layout>>(() => {
