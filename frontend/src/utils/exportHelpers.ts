@@ -1,4 +1,4 @@
-import Plotly from "plotly.js";
+import Plotly from "plotly.js-dist-min";
 
 export function downloadJSON(data: object, filename: string): void {
   const json = JSON.stringify(data, null, 2);

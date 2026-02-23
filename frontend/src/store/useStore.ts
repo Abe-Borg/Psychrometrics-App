@@ -200,7 +200,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   // Chart
   chartData: null,
-  chartLoading: false,
+  chartLoading: true,
   chartError: null,
 
   // State points
