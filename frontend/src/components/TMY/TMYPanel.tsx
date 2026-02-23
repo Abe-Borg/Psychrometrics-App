@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { useStore } from "../../store/useStore";
 import { uploadTMYFile, analyzeWeatherFile } from "../../api/client";
 import { fmt } from "../../utils/formatting";
+import DesignPointsTable from "./DesignPointsTable";
 
 export default function TMYPanel() {
   const {
@@ -231,6 +232,14 @@ export default function TMYPanel() {
             <div className="text-xs text-text-muted italic">
               Analyzing weather patterns...
             </div>
+          )}
+
+          {/* Design points table */}
+          {weatherAnalysis && weatherAnalysis.design_points.length > 0 && (
+            <DesignPointsTable
+              designPoints={weatherAnalysis.design_points}
+              unitSystem={unitSystem}
+            />
           )}
 
           {/* Clear button */}
